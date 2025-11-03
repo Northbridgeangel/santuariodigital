@@ -49,17 +49,19 @@ AFRAME.registerComponent("touch-hold", {
   schema: { speed: { default: 0.05 } },
   init: function () {
     const rig = document.querySelector("#rig");
+    const camera = document.querySelector("#camera");
     let interval;
 
     const moveForward = () => {
+      if (!camera || !rig) return;
+
       const pos = rig.object3D.position.clone();
       const dir = new THREE.Vector3();
-      rig.object3D.getWorldDirection(dir);
+      camera.object3D.getWorldDirection(dir); // ← ahora sí: dirección real de la cámara
 
-      // Normalizamos y movemos en la dirección hacia delante
       dir.normalize();
 
-      // OJO: En Three.js, mirar "adelante" es -Z
+      // Movernos hacia donde mira la cámara (en -Z)
       pos.x += dir.x * this.data.speed;
       pos.z += dir.z * this.data.speed;
 
