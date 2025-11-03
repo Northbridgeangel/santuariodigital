@@ -44,44 +44,57 @@ AFRAME.registerComponent("swipe-up-down", {
 });
 
 
-// Componente simple: avanza hacia adelante (Z+) mientras se mantiene pulsado
+// Componente para mover la cámara hacia delante mientras se mantiene pulsado (eje Z)
 AFRAME.registerComponent("touch-hold", {
-  schema: { speed: { default: 0.05 } },
+  schema: {
+    speed: { type: "number", default: 0.05 }, // velocidad de avance por segundo
+  },
+
   init: function () {
-    const rig = document.querySelector("#rig");
-    const camera = document.querySelector("#camera");
-    let interval;
+    // Variable que indica si se está manteniendo pulsado
+    this.holding = false;
 
-    const moveForward = () => {
-      if (!camera || !rig) return;
+    // Detecta cuando se toca la pantalla
+    window.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        this.holding = true; // comienza el movimiento
+        console.log("Touch hold: START");
+      }
+    });
 
-      const pos = rig.object3D.position.clone();
-      const dir = new THREE.Vector3();
-      camera.object3D.getWorldDirection(dir);
+    // Detecta cuando se deja de tocar
+    window.addEventListener("touchend", () => {
+      this.holding = false; // se detiene el movimiento
+      console.log("Touch hold: END");
+    });
+  },
 
-      dir.normalize();
+  tick: function (_, timeDelta) {
+    // timeDelta es el tiempo en ms desde el tick anterior
+    const deltaSeconds = timeDelta / 1000;
 
-      // Movernos hacia delante (en dirección -Z)
-      pos.x -= dir.x * this.data.speed;
-      pos.z -= dir.z * this.data.speed;
+    if (this.holding) {
+      // Obtenemos el objeto 3D de la cámara
+      const camera = this.el.object3D;
 
-      rig.object3D.position.copy(pos);
+      // Vector de dirección hacia donde apunta la cámara
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
 
+      // Normalizamos para magnitud 1
+      forward.normalize();
+
+      // Forzamos que Z siempre sea hacia delante (positivo según tu escena)
+      forward.z = -Math.abs(forward.z);
+
+      // Movemos solo en X y Z (no Y), sumando a la posición actual
+      camera.position.x += forward.x * this.data.speed * deltaSeconds;
+      camera.position.z += forward.z * this.data.speed * deltaSeconds;
+
+      // Debug: mostramos la posición actual de la cámara
       console.log(
-        `Moving forward: X=${pos.x.toFixed(2)}, Z=${pos.z.toFixed(
-          2
-        )}, dir=(${dir.x.toFixed(2)}, ${dir.z.toFixed(2)})`
+        `Moviéndose en Z: ${camera.position.z.toFixed(2)}, X: ${camera.position.x.toFixed(2)}`
       );
-    };
-
-    this.el.sceneEl.canvas.addEventListener("touchstart", () => {
-      console.log("Touch hold start");
-      interval = setInterval(moveForward, 16);
-    });
-
-    this.el.sceneEl.canvas.addEventListener("touchend", () => {
-      console.log("Touch hold end");
-      clearInterval(interval);
-    });
+    }
   },
 });
