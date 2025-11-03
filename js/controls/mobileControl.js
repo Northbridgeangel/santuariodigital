@@ -50,30 +50,47 @@ AFRAME.registerComponent("touch-hold", {
   init: function () {
     this.holding = false;
 
-    console.log("touch-hold inicializado"); // <--- Esto confirma que se carga
-
+    // Detecta cuando se toca la pantalla
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
         this.holding = true;
-        console.log("tocando: holding = true"); // <--- Debug de touch
+        console.log("👉 Touch start detectado. Movimiento activado.");
       }
     });
 
+    // Detecta cuando se deja de tocar
     window.addEventListener("touchend", () => {
       this.holding = false;
-      console.log("soltado: holding = false"); // <--- Debug de release
+      console.log("🖐️ Touch end detectado. Movimiento detenido.");
     });
   },
 
   tick: function (_, timeDelta) {
+    const deltaSeconds = timeDelta / 1000;
+
     if (this.holding) {
-      const deltaSeconds = timeDelta / 1000;
       const camera = this.el.object3D;
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
       forward.normalize();
-      camera.position.z += forward.z * this.data.speed * deltaSeconds;
-      console.log("moviéndose en Z", camera.position.z); // <--- Debug del movimiento
+
+      // Direcciones y datos de debug
+      console.log("➡️ Dirección forward:", forward);
+      console.log("⏱️ deltaSeconds:", deltaSeconds);
+      console.log("⚙️ Velocidad:", this.data.speed);
+
+      // Posición actual antes del movimiento
+      const pos = camera.position.clone();
+      console.log("📍 Posición inicial:", pos);
+
+      // Mueve en dirección -Z (hacia adelante visualmente)
+      pos.add(forward.multiplyScalar(-this.data.speed * deltaSeconds));
+
+      // Aplica el nuevo valor y sincroniza con el atributo de A-Frame
+      this.el.object3D.position.copy(pos);
+      this.el.setAttribute("position", pos);
+
+      console.log("🚀 Nueva posición Z:", pos.z);
     }
   },
 });
