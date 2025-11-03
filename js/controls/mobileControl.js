@@ -43,54 +43,45 @@ AFRAME.registerComponent("swipe-up-down", {
   },
 });
 
-// Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z)
+
+// Componente simple: avanza hacia adelante (Z+) mientras se mantiene pulsado
 AFRAME.registerComponent("touch-hold", {
-  schema: { speed: { type: "number", default: 0.05 } },
+  schema: {
+    speed: { type: "number", default: 0.05 }, // velocidad en unidades por segundo
+  },
 
   init: function () {
-    this.holding = false;
+    this.holding = false; // indica si el usuario mantiene pulsado
 
-    // Detecta cuando se toca la pantalla
+    // Detectar inicio del toque
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
         this.holding = true;
-        console.log("👉 Touch start detectado. Movimiento activado.");
+        console.log("Touch hold: iniciado");
       }
     });
 
-    // Detecta cuando se deja de tocar
+    // Detectar fin del toque
     window.addEventListener("touchend", () => {
       this.holding = false;
-      console.log("🖐️ Touch end detectado. Movimiento detenido.");
+      console.log("Touch hold: detenido");
     });
   },
 
   tick: function (_, timeDelta) {
+    // Convertimos el tiempo del frame a segundos
     const deltaSeconds = timeDelta / 1000;
 
     if (this.holding) {
       const camera = this.el.object3D;
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      forward.normalize();
+      const oldZ = camera.position.z; // posición anterior
 
-      // Direcciones y datos de debug
-      console.log("➡️ Dirección forward:", forward);
-      console.log("⏱️ deltaSeconds:", deltaSeconds);
-      console.log("⚙️ Velocidad:", this.data.speed);
+      // Movimiento solo en el eje Z positivo, constante y acumulativo
+      camera.position.z += this.data.speed * deltaSeconds;
 
-      // Posición actual antes del movimiento
-      const pos = camera.position.clone();
-      console.log("📍 Posición inicial:", pos);
-
-      // Mueve en dirección -Z (hacia adelante visualmente)
-      pos.add(forward.multiplyScalar(-this.data.speed * deltaSeconds));
-
-      // Aplica el nuevo valor y sincroniza con el atributo de A-Frame
-      this.el.object3D.position.copy(pos);
-      this.el.setAttribute("position", pos);
-
-      console.log("🚀 Nueva posición Z:", pos.z);
+      console.log(
+        `Moviéndose hacia delante: Z ${oldZ.toFixed(3)} -> ${camera.position.z.toFixed(3)}`
+      );
     }
   },
 });
