@@ -55,7 +55,8 @@ AFRAME.registerComponent("touch-hold", {
       const pos = rig.object3D.position;
       const dir = new THREE.Vector3();
       rig.object3D.getWorldDirection(dir);
-      pos.addScaledVector(dir, this.data.speed);
+      // Invertimos la dirección (hacia adelante)
+      pos.addScaledVector(dir, -this.data.speed);
       rig.object3D.position.copy(pos);
       console.log(
         `Moving forward: x=${pos.x.toFixed(2)} z=${pos.z.toFixed(2)}`
@@ -73,4 +74,3 @@ AFRAME.registerComponent("touch-hold", {
     });
   },
 });
-
