@@ -57,13 +57,13 @@ AFRAME.registerComponent("touch-hold", {
 
       const pos = rig.object3D.position.clone();
       const dir = new THREE.Vector3();
-      camera.object3D.getWorldDirection(dir); // ← ahora sí: dirección real de la cámara
+      camera.object3D.getWorldDirection(dir);
 
       dir.normalize();
 
-      // Movernos hacia donde mira la cámara (en -Z)
-      pos.x += dir.x * this.data.speed;
-      pos.z += dir.z * this.data.speed;
+      // Movernos hacia delante (en dirección -Z)
+      pos.x -= dir.x * this.data.speed;
+      pos.z -= dir.z * this.data.speed;
 
       rig.object3D.position.copy(pos);
 
