@@ -52,20 +52,29 @@ AFRAME.registerComponent("touch-hold", {
     let interval;
 
     const moveForward = () => {
-      const pos = rig.object3D.position;
+      const pos = rig.object3D.position.clone();
       const dir = new THREE.Vector3();
       rig.object3D.getWorldDirection(dir);
-      // Invertimos la dirección (hacia adelante)
-      pos.addScaledVector(dir, -this.data.speed);
+
+      // Normalizamos y movemos en la dirección hacia delante
+      dir.normalize();
+
+      // OJO: En Three.js, mirar "adelante" es -Z
+      pos.x += dir.x * this.data.speed;
+      pos.z += dir.z * this.data.speed;
+
       rig.object3D.position.copy(pos);
+
       console.log(
-        `Moving forward: x=${pos.x.toFixed(2)} z=${pos.z.toFixed(2)}`
+        `Moving forward: X=${pos.x.toFixed(2)}, Z=${pos.z.toFixed(
+          2
+        )}, dir=(${dir.x.toFixed(2)}, ${dir.z.toFixed(2)})`
       );
     };
 
     this.el.sceneEl.canvas.addEventListener("touchstart", () => {
       console.log("Touch hold start");
-      interval = setInterval(moveForward, 16); // ~60fps
+      interval = setInterval(moveForward, 16);
     });
 
     this.el.sceneEl.canvas.addEventListener("touchend", () => {
