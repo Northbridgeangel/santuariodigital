@@ -10,10 +10,10 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
     <!-- Componentes custom -->
-     <script type="module" src="./js/Main.js"></script>
+    <script type="module" src="./js/Main.js"></script>
+    <script src="./js/controls/desktopControl.js"></script>
+    <script src="./js/controls/mobileControl.js"></script>
     <script src="./js/components/handleClick.js"></script>
-    <script src="./js/components/scroll-fly-smooth.js"></script>
-    <script src="./js/components/smooth-wasd.js"></script>
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
@@ -30,8 +30,8 @@
 
         <!-- Cámara con movimiento WASD y raycaster optimizado -->
         <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15"
-            scroll-fly-smooth="speed:0.02; step:0.25; minY:0; maxY:10" raycaster="objects: [data-raycastable]" clickable
-            position="0 1.6 0">
+            scroll-fly-smooth="speed:0.02; step:0.25; minY:0; maxY:10" touch-fly-z touch-fly-y touch-fly-longpress
+            raycaster="objects: [data-raycastable]" clickable position="0 1.6 0">
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
