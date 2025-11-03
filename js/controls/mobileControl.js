@@ -47,44 +47,55 @@ AFRAME.registerComponent("swipe-up-down", {
 // Componente para mover el rig hacia delante mientras se mantiene pulsado (eje Z)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.25 },
+    speed: { type: "number", default: 0.15 }, // velocidad de avance por segundo
   },
 
   init: function () {
-    // Aplica el componente al rig
+    // Flag que indica si se mantiene pulsado
     this.holding = false;
 
+    // Detecta inicio de toque
     window.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) this.holding = true;
+      if (e.touches.length === 1) {
+        this.holding = true;
+        console.log("Touch hold started");
+      }
     });
 
+    // Detecta fin de toque
     window.addEventListener("touchend", () => {
       this.holding = false;
+      console.log("Touch hold ended");
     });
   },
 
   tick: function (_, timeDelta) {
     if (!this.holding) return;
 
+    // Convertimos delta de ms a segundos
     const deltaSeconds = timeDelta / 1000;
-    const rig = this.el.object3D; // EL rig es la entidad donde aplicas este componente
-    const camera = this.el.querySelector("[camera]").object3D; // La cámara dentro del rig
 
+    // Obtenemos el rig y la cámara dentro del rig
+    const rig = this.el; // asumimos que el componente se pone en el <a-entity id="rig">
+    const camera = rig.querySelector("#camera").object3D;
+
+    // Obtenemos dirección forward de la cámara
     const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
+    camera.getWorldDirection(forward); // calcula forward en mundo
     forward.normalize();
 
-    // Forzar que siempre avance (hacia delante)
-    forward.z = -Math.abs(forward.z);
-
-    // Sumar al rig, no a la cámara
-    rig.position.x += forward.x * this.data.speed * deltaSeconds;
-    rig.position.z += forward.z * this.data.speed * deltaSeconds;
+    // Movemos solo en Z hacia adelante (acumulativo)
+    rig.object3D.position.x += forward.x * this.data.speed * deltaSeconds;
+    rig.object3D.position.z += forward.z * this.data.speed * deltaSeconds;
 
     console.log(
-      `Rig moviéndose: X=${rig.position.x.toFixed(
-        2
-      )} Z=${rig.position.z.toFixed(2)}`
+      "Moving touch-hold",
+      "Rig pos:",
+      rig.object3D.position.x.toFixed(2),
+      rig.object3D.position.z.toFixed(2),
+      "Forward:",
+      forward.x.toFixed(2),
+      forward.z.toFixed(2)
     );
   },
 });
