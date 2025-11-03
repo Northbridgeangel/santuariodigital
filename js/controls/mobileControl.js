@@ -45,44 +45,35 @@ AFRAME.registerComponent("swipe-up-down", {
 
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z)
 AFRAME.registerComponent("touch-hold", {
-  schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad de avance por segundo
-  },
+  schema: { speed: { type: "number", default: 0.05 } },
 
   init: function () {
-    // Variable que indica si se está manteniendo pulsado
     this.holding = false;
 
-    // Detecta cuando se toca la pantalla
+    console.log("touch-hold inicializado"); // <--- Esto confirma que se carga
+
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
-        this.holding = true; // comienza el movimiento
+        this.holding = true;
+        console.log("tocando: holding = true"); // <--- Debug de touch
       }
     });
 
-    // Detecta cuando se deja de tocar
     window.addEventListener("touchend", () => {
-      this.holding = false; // se detiene el movimiento
+      this.holding = false;
+      console.log("soltado: holding = false"); // <--- Debug de release
     });
   },
 
   tick: function (_, timeDelta) {
-    // timeDelta es el tiempo en ms desde el tick anterior
-    // Lo convertimos a segundos para calcular el desplazamiento
-    const deltaSeconds = timeDelta / 1000;
-
     if (this.holding) {
+      const deltaSeconds = timeDelta / 1000;
       const camera = this.el.object3D;
-
-      // Dirección forward de la cámara
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
-
-      // Normalizamos para que tenga magnitud 1
       forward.normalize();
-
-      // Movemos solo en Z (hacia adelante), sumando constantemente mientras se mantiene pulsado
       camera.position.z += forward.z * this.data.speed * deltaSeconds;
+      console.log("moviéndose en Z", camera.position.z); // <--- Debug del movimiento
     }
   },
 });
