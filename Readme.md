@@ -81,9 +81,10 @@ Nota del funcionamiento: Ignorar los warnings de framebuffer si la escena se ve 
 │  └─ components/                # Componentes personalizados de A-Frame
 │     ├─ DetectorClickHover.js   # Detección de eventos click y hover
 │     ├─ Embellecedor.js         # Ajustes visuales y embellecimiento
-│     ├─ handleClick.js          # Lógica de interacción al hacer click
-│     ├─ scroll-fly-smooth.js    # Movimiento con desplazamiento fluido
-│     └─ smooth-wasd.js          # Movimiento con teclado WASD suave
+│     └─ handleClick.js          # Lógica de interacción al hacer click
+│  └─ controls/                  # Controles de movimiento según dispositivo
+│     ├─ desktopControl.js       # Movimiento desktop scroll-fly-smooth y smooth-wasd
+│     └─ mobileControl.js        # Movimiento móvil swipe y touch-hold
 └─ index.html                    # Escena principal de A-Frame
 
 ---

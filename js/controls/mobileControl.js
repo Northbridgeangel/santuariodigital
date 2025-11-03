@@ -43,33 +43,46 @@ AFRAME.registerComponent("swipe-up-down", {
   },
 });
 
-// Componente para mover la cámara adelante mientras se mantiene pulsado (eje Z)
+// Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad de avance
+    speed: { type: "number", default: 0.05 }, // velocidad de avance por segundo
   },
 
   init: function () {
+    // Variable que indica si se está manteniendo pulsado
     this.holding = false;
 
+    // Detecta cuando se toca la pantalla
     window.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) this.holding = true;
+      if (e.touches.length === 1) {
+        this.holding = true; // comienza el movimiento
+      }
     });
 
-    window.addEventListener("touchend", (e) => {
-      this.holding = false;
+    // Detecta cuando se deja de tocar
+    window.addEventListener("touchend", () => {
+      this.holding = false; // se detiene el movimiento
     });
   },
 
-  tick: function () {
+  tick: function (_, timeDelta) {
+    // timeDelta es el tiempo en ms desde el tick anterior
+    // Lo convertimos a segundos para calcular el desplazamiento
+    const deltaSeconds = timeDelta / 1000;
+
     if (this.holding) {
       const camera = this.el.object3D;
+
+      // Dirección forward de la cámara
       const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward); // no anulamos Y
+      camera.getWorldDirection(forward);
+
+      // Normalizamos para que tenga magnitud 1
       forward.normalize();
 
-      const move = forward.clone().multiplyScalar(this.data.speed);
-      camera.position.add(move);
+      // Movemos solo en Z (hacia adelante), sumando constantemente mientras se mantiene pulsado
+      camera.position.z += forward.z * this.data.speed * deltaSeconds;
     }
   },
 });
