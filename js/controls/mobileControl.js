@@ -52,32 +52,24 @@ AFRAME.registerComponent("touch-hold", {
   init: function () {
     this.holding = false;
 
-    this.el.sceneEl.canvas.addEventListener(
-      "touchstart",
-      (e) => {
-        if (e.touches.length === 1) this.holding = true;
-      },
-      false
-    );
+    window.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) this.holding = true;
+    });
 
-    this.el.sceneEl.canvas.addEventListener(
-      "touchend",
-      (e) => {
-        this.holding = false;
-      },
-      false
-    );
+    window.addEventListener("touchend", (e) => {
+      this.holding = false;
+    });
   },
 
   tick: function () {
     if (this.holding) {
       const camera = this.el.object3D;
       const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      forward.y = 0;
+      camera.getWorldDirection(forward); // no anulamos Y
       forward.normalize();
 
-      camera.position.add(forward.multiplyScalar(this.data.speed));
+      const move = forward.clone().multiplyScalar(this.data.speed);
+      camera.position.add(move);
     }
   },
 });
