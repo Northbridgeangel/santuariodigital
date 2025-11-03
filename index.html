@@ -28,10 +28,13 @@
         <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-        <!-- Cámara con movimiento WASD y raycaster optimizado -->
-        <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15"
-            scroll-fly-smooth="speed:0.02; step:0.25; minY:0; maxY:10" swipe-up-down touch-hold
-            raycaster="objects: [data-raycastable]" clickable position="0 1.6 0">
+        <!-- RIG que agrupa movimiento + cámara -->
+        <a-entity id="rig" position="0 0 0">
+            <!-- Cámara con todos tus controles -->
+            <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15"
+                scroll-fly-smooth="speed:0.02; step:0.25; minY:0; maxY:10" swipe-up-down touch-hold
+                raycaster="objects: [data-raycastable]" clickable position="0 1.6 0">
+            </a-entity>
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->

@@ -46,42 +46,31 @@ AFRAME.registerComponent("swipe-up-down", {
 
 // Componente simple: avanza hacia adelante (Z+) mientras se mantiene pulsado
 AFRAME.registerComponent("touch-hold", {
-  schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad en unidades por segundo
-  },
-
+  schema: { speed: { default: 0.05 } },
   init: function () {
-    this.holding = false; // indica si el usuario mantiene pulsado
+    const rig = document.querySelector("#rig");
+    let interval;
 
-    // Detectar inicio del toque
-    window.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) {
-        this.holding = true;
-        console.log("Touch hold: iniciado");
-      }
-    });
-
-    // Detectar fin del toque
-    window.addEventListener("touchend", () => {
-      this.holding = false;
-      console.log("Touch hold: detenido");
-    });
-  },
-
-  tick: function (_, timeDelta) {
-    // Convertimos el tiempo del frame a segundos
-    const deltaSeconds = timeDelta / 1000;
-
-    if (this.holding) {
-      const camera = this.el.object3D;
-      const oldZ = camera.position.z; // posición anterior
-
-      // Movimiento solo en el eje Z positivo, constante y acumulativo
-      camera.position.z += this.data.speed * deltaSeconds;
-
+    const moveForward = () => {
+      const pos = rig.object3D.position;
+      const dir = new THREE.Vector3();
+      rig.object3D.getWorldDirection(dir);
+      pos.addScaledVector(dir, this.data.speed);
+      rig.object3D.position.copy(pos);
       console.log(
-        `Moviéndose hacia delante: Z ${oldZ.toFixed(3)} -> ${camera.position.z.toFixed(3)}`
+        `Moving forward: x=${pos.x.toFixed(2)} z=${pos.z.toFixed(2)}`
       );
-    }
+    };
+
+    this.el.sceneEl.canvas.addEventListener("touchstart", () => {
+      console.log("Touch hold start");
+      interval = setInterval(moveForward, 16); // ~60fps
+    });
+
+    this.el.sceneEl.canvas.addEventListener("touchend", () => {
+      console.log("Touch hold end");
+      clearInterval(interval);
+    });
   },
 });
+
