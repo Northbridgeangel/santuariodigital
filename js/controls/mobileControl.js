@@ -44,56 +44,53 @@ AFRAME.registerComponent("swipe-up-down", {
 });
 
 
-// Componente para mover la cámara hacia delante mientras se mantiene pulsado (eje Z)
+// Componente para mover el rig hacia delante mientras se mantiene pulsado (eje Z)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad de avance por segundo
+    speed: { type: "number", default: 0.25 }, // velocidad de avance por segundo
   },
 
   init: function () {
+    // Guardamos la entidad que representa el rig
+    this.rig = this.el;
+
     // Variable que indica si se está manteniendo pulsado
     this.holding = false;
 
-    // Detecta cuando se toca la pantalla
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
-        this.holding = true; // comienza el movimiento
+        this.holding = true;
         console.log("Touch hold: START");
       }
     });
 
-    // Detecta cuando se deja de tocar
     window.addEventListener("touchend", () => {
-      this.holding = false; // se detiene el movimiento
+      this.holding = false;
       console.log("Touch hold: END");
     });
   },
 
   tick: function (_, timeDelta) {
-    // timeDelta es el tiempo en ms desde el tick anterior
     const deltaSeconds = timeDelta / 1000;
 
     if (this.holding) {
-      // Obtenemos el objeto 3D de la cámara
-      const camera = this.el.object3D;
+      // Usamos la dirección hacia adelante basada en la cámara dentro del rig
+      const camera = this.rig.querySelector("[camera]").object3D;
 
-      // Vector de dirección hacia donde apunta la cámara
       const forward = new THREE.Vector3();
       camera.getWorldDirection(forward);
-
-      // Normalizamos para magnitud 1
       forward.normalize();
 
-      // Forzamos que Z siempre sea hacia delante (positivo según tu escena)
+      // Forzamos que Z siempre avance
       forward.z = -Math.abs(forward.z);
 
-      // Movemos solo en X y Z (no Y), sumando a la posición actual
-      camera.position.x += forward.x * this.data.speed * deltaSeconds;
-      camera.position.z += forward.z * this.data.speed * deltaSeconds;
+      // Movemos el rig, no la cámara local
+      const rigPos = this.rig.object3D.position;
+      rigPos.x += forward.x * this.data.speed * deltaSeconds;
+      rigPos.z += forward.z * this.data.speed * deltaSeconds;
 
-      // Debug: mostramos la posición actual de la cámara
       console.log(
-        `Moviéndose en Z: ${camera.position.z.toFixed(2)}, X: ${camera.position.x.toFixed(2)}`
+        `Moviéndose en rig Z: ${rigPos.z.toFixed(2)}, X: ${rigPos.x.toFixed(2)}`
       );
     }
   },
