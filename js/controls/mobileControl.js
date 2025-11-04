@@ -43,59 +43,67 @@ AFRAME.registerComponent("swipe-up-down", {
   },
 });
 
-// Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo al rig)
+// Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.09 }, // velocidad de avance por segundo
+    speed: { type: "number", default: 0.88 }, // velocidad de avance por segundo
   },
 
   init: function () {
-    // Variable que indica si se está manteniendo pulsado
+    // Indica si el usuario mantiene pulsado
     this.holding = false;
 
-    // Detecta cuando se toca la pantalla
+    // Detecta toque inicial
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
-        this.holding = true; // comienza el movimiento
-        console.log("Touch Hold iniciado");
+        this.holding = true;
+        console.log("Touch Hold activado");
       }
     });
 
     // Detecta cuando se deja de tocar
     window.addEventListener("touchend", () => {
-      this.holding = false; // se detiene el movimiento
-      console.log("Touch Hold detenido");
+      this.holding = false;
+      console.log("Touch Hold desactivado");
     });
   },
 
   tick: function (_, timeDelta) {
     if (!this.holding) return;
 
-    // Convertimos delta de ms a segundos
+    // Convertimos el delta de tiempo a segundos
     const deltaSeconds = timeDelta / 1000;
 
-    // Tomamos la posición actual del objeto (rig o cámara)
     const camera = this.el.object3D;
 
-    // Vector forward de la cámara
+    // Obtenemos el vector forward de la cámara (donde está mirando)
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
+
+    // Solo nos interesa el movimiento horizontal XZ
+    forward.y = 0;
     forward.normalize();
 
-    // Forzamos que siempre avance hacia delante, sin importar orientación global
+    // Movemos la cámara en el espacio global XZ según su orientación
     const moveVector = forward
       .clone()
       .multiplyScalar(this.data.speed * deltaSeconds);
+    camera.position.add(moveVector);
 
-    // Multiplicamos por -1 para asegurar que Z avanza hacia delante
-    camera.position.x += moveVector.x * -1;
-    camera.position.z += moveVector.z * -1;
-
-    // Debug: imprimir posición cada tick
+    // Logs de depuración
     console.log(
-      `Moviéndose en Z hacia delante: posición X=${camera.position.x.toFixed(
-        3
-      )}, Z=${camera.position.z.toFixed(3)}`
+      "Moviendo cámara:",
+      "X:",
+      camera.position.x.toFixed(2),
+      "Z:",
+      camera.position.z.toFixed(2)
+    );
+    console.log(
+      "Forward:",
+      forward.x.toFixed(2),
+      forward.z.toFixed(2),
+      "DeltaSeconds:",
+      deltaSeconds.toFixed(3)
     );
   },
 });
