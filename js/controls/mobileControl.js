@@ -73,9 +73,7 @@ AFRAME.registerComponent("touch-hold", {
     camera.getWorldDirection(forward);
     forward.normalize();
 
-    // Forzar que siempre avance (hacia delante)
-    forward.z = -Math.abs(forward.z);
-
+    
     // Sumar al rig, no a la cámara
     rig.position.x += forward.x * this.data.speed * deltaSeconds;
     rig.position.z += forward.z * this.data.speed * deltaSeconds;
