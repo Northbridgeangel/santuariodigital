@@ -45,30 +45,45 @@ AFRAME.registerComponent("swipe-up-down", {
 
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
-  schema: { speed: { default: 0.88 } },
+  schema: {
+    speed: { type: "number", default: 0.05 },
+  },
+
   init: function () {
-    const rig = document.querySelector("#rig");
-    let interval;
+    // Aplica el componente al rig
+    this.holding = false;
 
-    const moveForward = () => {
-      const pos = rig.object3D.position;
-      const dir = new THREE.Vector3();
-      rig.object3D.getWorldDirection(dir);
-      pos.addScaledVector(dir, this.data.speed);
-      rig.object3D.position.copy(pos);
-      console.log(
-        `Moving forward: x=${pos.x.toFixed(2)} z=${pos.z.toFixed(2)}`
-      );
-    };
-
-    this.el.sceneEl.canvas.addEventListener("touchstart", () => {
-      console.log("Touch hold start");
-      interval = setInterval(moveForward, 16); // ~60fps
+    window.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) this.holding = true;
     });
 
-    this.el.sceneEl.canvas.addEventListener("touchend", () => {
-      console.log("Touch hold end");
-      clearInterval(interval);
+    window.addEventListener("touchend", () => {
+      this.holding = false;
     });
+  },
+
+  tick: function (_, timeDelta) {
+    if (!this.holding) return;
+
+    const deltaSeconds = timeDelta / 1000;
+    const rig = this.el.object3D; // EL rig es la entidad donde aplicas este componente
+    const camera = this.el.querySelector("[camera]").object3D; // La cámara dentro del rig
+
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.normalize();
+
+    // Forzar que siempre avance (hacia delante)
+    forward.z = -Math.abs(forward.z);
+
+    // Sumar al rig, no a la cámara
+    rig.position.x += forward.x * this.data.speed * deltaSeconds;
+    rig.position.z += forward.z * this.data.speed * deltaSeconds;
+
+    console.log(
+      `Rig moviéndose: X=${rig.position.x.toFixed(
+        2
+      )} Z=${rig.position.z.toFixed(2)}`
+    );
   },
 });
