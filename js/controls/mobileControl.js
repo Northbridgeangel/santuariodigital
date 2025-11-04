@@ -71,42 +71,31 @@ AFRAME.registerComponent("touch-hold", {
 
     const deltaSeconds = timeDelta / 1000;
     const rig = this.el.object3D;
-    const camera = this.el.querySelector("[camera]").object3D;
 
     // Guardamos posición actual
     this.currentPos.copy(rig.position);
 
-    // Obtenemos dirección forward de la cámara
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
+    // Calculamos forward basado en la posición actual del rig, invertida
+    const forward = this.currentPos.clone().multiplyScalar(-1);
 
-    // Solo nos interesa el plano XZ
-    forward.y = 0;
+    // Normalizamos para mantener dirección consistente
     forward.normalize();
 
-    // Invertimos forward para que siempre vaya hacia delante
-    forward.multiplyScalar(-1);
-
-    // Cross Vector (perpendicular, por si quieres usar para strafe)
-    const right = new THREE.Vector3();
-    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
-
     // Calculamos desplazamiento
-    const move = new THREE.Vector3();
-    move.add(forward.multiplyScalar(this.data.speed * deltaSeconds));
+    const move = forward.clone().multiplyScalar(this.data.speed * deltaSeconds);
 
     // Aplicamos movimiento al rig
     this.currentPos.add(move);
-
-    // Copy Pos: actualizar posición del rig sin perder consistencia
     rig.position.set(this.currentPos.x, rig.position.y, this.currentPos.z);
 
     console.log(
       `Rig moviéndose: X=${rig.position.x.toFixed(
         2
-      )} Z=${rig.position.z.toFixed(2)} | Forward: X=${forward.x.toFixed(
+      )} Z=${rig.position.z.toFixed(
         2
-      )} Z=${forward.z.toFixed(2)}`
+      )} | Forward invertido: X=${forward.x.toFixed(2)} Z=${forward.z.toFixed(
+        2
+      )}`
     );
   },
 });
