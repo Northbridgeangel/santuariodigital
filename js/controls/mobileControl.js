@@ -84,7 +84,10 @@ AFRAME.registerComponent("touch-hold", {
     forward.y = 0;
     forward.normalize();
 
-    // Cross Vector (perpendicular para mantener coherencia de dirección)
+    // Invertimos forward para que siempre vaya hacia delante
+    forward.multiplyScalar(-1);
+
+    // Cross Vector (perpendicular, por si quieres usar para strafe)
     const right = new THREE.Vector3();
     right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
 
