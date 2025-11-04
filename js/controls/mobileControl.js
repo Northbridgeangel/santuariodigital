@@ -61,9 +61,6 @@ AFRAME.registerComponent("touch-hold", {
     window.addEventListener("touchend", () => {
       this.holding = false;
     });
-
-    // Posición inicial del rig
-    this.currentPos = new THREE.Vector3();
   },
 
   tick: function (_, timeDelta) {
@@ -71,31 +68,27 @@ AFRAME.registerComponent("touch-hold", {
 
     const deltaSeconds = timeDelta / 1000;
     const rig = this.el.object3D;
+    const camera = this.el.querySelector("[camera]").object3D;
 
-    // Guardamos posición actual
-    this.currentPos.copy(rig.position);
-
-    // Calculamos forward basado en la posición actual del rig, invertida
-    const forward = this.currentPos.clone().multiplyScalar(-1);
-
-    // Normalizamos para mantener dirección consistente
+    // Dirección de la cámara en el mundo
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0; // ignorar altura
     forward.normalize();
 
-    // Calculamos desplazamiento
-    const move = forward.clone().multiplyScalar(this.data.speed * deltaSeconds);
+    // Invertir componentes para que avance hacia delante
+    forward.multiplyScalar(-1);
 
-    // Aplicamos movimiento al rig
-    this.currentPos.add(move);
-    rig.position.set(this.currentPos.x, rig.position.y, this.currentPos.z);
+    // Aplicar desplazamiento al rig
+    rig.position.x += forward.x * this.data.speed * deltaSeconds;
+    rig.position.z += forward.z * this.data.speed * deltaSeconds;
 
     console.log(
       `Rig moviéndose: X=${rig.position.x.toFixed(
         2
-      )} Z=${rig.position.z.toFixed(
+      )} Z=${rig.position.z.toFixed(2)} | Forward: X=${forward.x.toFixed(
         2
-      )} | Forward invertido: X=${forward.x.toFixed(2)} Z=${forward.z.toFixed(
-        2
-      )}`
+      )} Z=${forward.z.toFixed(2)}`
     );
   },
 });
