@@ -21,7 +21,7 @@ AFRAME.registerComponent("swipe-up-down", {
       (e) => {
         if (e.touches.length === 1 && this.startY !== null) {
           let deltaY = e.touches[0].clientY - this.startY;
-          this.targetY -= deltaY * 0.01; // ajuste de sensibilidad
+          this.targetY -= deltaY * 0.007; // ajuste de sensibilidad (0.01 muy brusco)
           this.startY = e.touches[0].clientY;
         }
       },
@@ -58,7 +58,7 @@ AFRAME.registerComponent("swipe-left-right", {
     this.el.sceneEl.canvas.addEventListener("touchmove", (e) => {
       if (this.startX !== null && e.touches.length === 1) {
         const deltaX = e.touches[0].clientX - this.startX;
-        this.targetRotationY -= deltaX * 0.01; // ajustar sensibilidad
+        this.targetRotationY -= deltaX * 0.007; // ajustar sensibilidad (0.01 muy brusco)
         this.startX = e.touches[0].clientX;
       }
     });
@@ -77,7 +77,7 @@ AFRAME.registerComponent("swipe-left-right", {
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.3 },
+    speed: { type: "number", default: 0.5 },
   },
 
   init: function () {
