@@ -43,36 +43,14 @@ AFRAME.registerComponent("swipe-up-down", {
   },
 });
 
-//No imprescindible, para igualar la suavidad de movimiento horizontal
+//Minicomponente para igualar la suavidad horizontal a la del movimiento vertical
 AFRAME.registerComponent("swipe-left-right", {
-  schema: { speed: { type: "number", default: 0.05 } },
-
-  init: function () {
-    this.startX = null;
-    this.targetRotationY = this.el.object3D.rotation.y;
-
-    this.el.sceneEl.canvas.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) this.startX = e.touches[0].clientX;
-    });
-
-    this.el.sceneEl.canvas.addEventListener("touchmove", (e) => {
-      if (this.startX !== null && e.touches.length === 1) {
-        const deltaX = e.touches[0].clientX - this.startX;
-        this.targetRotationY -= deltaX * 0.007; // ajustar sensibilidad (0.01 muy brusco)
-        this.startX = e.touches[0].clientX;
-      }
-    });
-
-    this.el.sceneEl.canvas.addEventListener("touchend", () => {
-      this.startX = null;
-    });
-  },
-
-  tick: function () {
-    const rot = this.el.object3D.rotation;
-    rot.y += (this.targetRotationY - rot.y) * this.data.speed; // lerp suave
+  schema: {
+    speed: { type: "number", default: 0.05 }, // suavidad del giro
+    sensitivity: { type: "number", default: 0.007 }, // sensibilidad del swipe
   },
 });
+
 
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
