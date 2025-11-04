@@ -45,53 +45,30 @@ AFRAME.registerComponent("swipe-up-down", {
 
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
-  schema: {
-    speed: { type: "number", default: 0.88 }, // velocidad de avance por segundo
-  },
-
+  schema: { speed: { default: 0.88 } },
   init: function () {
-    // Indicador de si se mantiene pulsado
-    this.holding = false;
+    const rig = document.querySelector("#rig");
+    let interval;
 
-    // Detecta toque único en pantalla
-    window.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) {
-        this.holding = true;
-        console.log("Touch start: movimiento activado");
-      }
+    const moveForward = () => {
+      const pos = rig.object3D.position;
+      const dir = new THREE.Vector3();
+      rig.object3D.getWorldDirection(dir);
+      pos.addScaledVector(dir, this.data.speed);
+      rig.object3D.position.copy(pos);
+      console.log(
+        `Moving forward: x=${pos.x.toFixed(2)} z=${pos.z.toFixed(2)}`
+      );
+    };
+
+    this.el.sceneEl.canvas.addEventListener("touchstart", () => {
+      console.log("Touch hold start");
+      interval = setInterval(moveForward, 16); // ~60fps
     });
 
-    // Detecta fin del toque
-    window.addEventListener("touchend", () => {
-      this.holding = false;
-      console.log("Touch end: movimiento detenido");
+    this.el.sceneEl.canvas.addEventListener("touchend", () => {
+      console.log("Touch hold end");
+      clearInterval(interval);
     });
-  },
-
-  tick: function (_, timeDelta) {
-    if (!this.holding) return;
-
-    const deltaSeconds = timeDelta / 1000; // Convertir ms a segundos
-    const camera = this.el.object3D;
-
-    // Obtener dirección forward de la cámara en world coordinates
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    forward.normalize(); // Magnitud 1
-
-    // Multiplicamos forward por speed y deltaSeconds
-    const moveVector = forward
-      .clone()
-      .multiplyScalar(this.data.speed * deltaSeconds);
-
-    // Aplicamos movimiento a la posición actual de la cámara
-    camera.position.add(moveVector);
-
-    // Debug: mostrar posiciones X y Z actualizadas
-    console.log(
-      `Moviéndose -> X: ${camera.position.x.toFixed(
-        3
-      )}, Z: ${camera.position.z.toFixed(3)}`
-    );
   },
 });
