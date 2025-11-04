@@ -50,60 +50,48 @@ AFRAME.registerComponent("touch-hold", {
   },
 
   init: function () {
-    // Indica si el usuario mantiene pulsado
+    // Indicador de si se mantiene pulsado
     this.holding = false;
 
-    // Detecta toque inicial
+    // Detecta toque único en pantalla
     window.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
         this.holding = true;
-        console.log("Touch Hold activado");
+        console.log("Touch start: movimiento activado");
       }
     });
 
-    // Detecta cuando se deja de tocar
+    // Detecta fin del toque
     window.addEventListener("touchend", () => {
       this.holding = false;
-      console.log("Touch Hold desactivado");
+      console.log("Touch end: movimiento detenido");
     });
   },
 
   tick: function (_, timeDelta) {
     if (!this.holding) return;
 
-    // Convertimos el delta de tiempo a segundos
-    const deltaSeconds = timeDelta / 1000;
-
+    const deltaSeconds = timeDelta / 1000; // Convertir ms a segundos
     const camera = this.el.object3D;
 
-    // Obtenemos el vector forward de la cámara (donde está mirando)
+    // Obtener dirección forward de la cámara en world coordinates
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
+    forward.normalize(); // Magnitud 1
 
-    // Solo nos interesa el movimiento horizontal XZ
-    forward.y = 0;
-    forward.normalize();
-
-    // Movemos la cámara en el espacio global XZ según su orientación
+    // Multiplicamos forward por speed y deltaSeconds
     const moveVector = forward
       .clone()
       .multiplyScalar(this.data.speed * deltaSeconds);
+
+    // Aplicamos movimiento a la posición actual de la cámara
     camera.position.add(moveVector);
 
-    // Logs de depuración
+    // Debug: mostrar posiciones X y Z actualizadas
     console.log(
-      "Moviendo cámara:",
-      "X:",
-      camera.position.x.toFixed(2),
-      "Z:",
-      camera.position.z.toFixed(2)
-    );
-    console.log(
-      "Forward:",
-      forward.x.toFixed(2),
-      forward.z.toFixed(2),
-      "DeltaSeconds:",
-      deltaSeconds.toFixed(3)
+      `Moviéndose -> X: ${camera.position.x.toFixed(
+        3
+      )}, Z: ${camera.position.z.toFixed(3)}`
     );
   },
 });
