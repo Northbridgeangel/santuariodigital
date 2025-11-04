@@ -1,7 +1,7 @@
 // Componente para mover la cámara arriba y abajo con swipe (eje Y)
 AFRAME.registerComponent("swipe-up-down", {
   schema: {
-    speed: { type: "number", default: 0.05 }, // suavidad del movimiento
+    speed: { type: "number", default: 0.1 }, // suavidad del movimiento
   },
 
   init: function () {
@@ -46,7 +46,7 @@ AFRAME.registerComponent("swipe-up-down", {
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {
   schema: {
-    speed: { type: "number", default: 0.088 },
+    speed: { type: "number", default: 0.3 },
   },
 
   init: function () {
