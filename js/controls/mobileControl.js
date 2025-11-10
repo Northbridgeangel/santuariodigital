@@ -1,3 +1,4 @@
+//mobileControl.js;
 // Componente para mover la cámara arriba y abajo con swipe (eje Y)
 AFRAME.registerComponent("swipe-up-down", {
   schema: {
@@ -50,7 +51,6 @@ AFRAME.registerComponent("swipe-left-right", {
     sensitivity: { type: "number", default: 0.007 }, // sensibilidad del swipe
   },
 });
-
 
 // Componente para mover la cámara hacia adelante mientras se mantiene pulsado (eje Z relativo a cámara)
 AFRAME.registerComponent("touch-hold", {

@@ -84,7 +84,8 @@ Nota del funcionamiento: Ignorar los warnings de framebuffer si la escena se ve 
 │     └─ handleClick.js          # Lógica de interacción al hacer click
 │  └─ controls/                  # Controles de movimiento según dispositivo
 │     ├─ desktopControl.js       # Movimiento desktop scroll-fly-smooth y smooth-wasd
-│     └─ mobileControl.js        # Movimiento móvil swipe y touch-hold
+│     ├─ mobileControl.js        # Movimiento móvil swipe y touch-hold
+│     └─ fly-mode.js             # Componentes check-player y check-door
 └─ index.html                    # Escena principal de A-Frame
 
 ---

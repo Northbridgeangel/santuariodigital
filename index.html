@@ -13,6 +13,7 @@
     <script type="module" src="./js/Main.js"></script>
     <script src="./js/controls/desktopControl.js"></script>
     <script src="./js/controls/mobileControl.js"></script>
+    <script src="./js/controls/fly-mode.js"></script>
     <script src="./js/components/handleClick.js"></script>
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
@@ -22,23 +23,23 @@
 <body>
     <a-scene vr-mode-ui="enabled: false" cursor="rayOrigin: mouse">
         <!-- Fondo -->
-        <a-sky src="./assets/environment.png" rotation="0 -90 0"></a-sky>
+        <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
         <!-- Luz principal -->
         <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
         <!-- RIG que agrupa movimiento + cámara -->
-        <a-entity id="rig" position="0 0 0" touch-hold>
+        <a-entity id="rig" position="0 0 0" check-player touch-hold scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
             <!-- Cámara con todos tus controles -->
-            <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15"
-                scroll-fly-smooth="speed:0.02; step:0.25; minY:0; maxY:10" swipe-up-down swipe-left-right 
-                raycaster="objects: [data-raycastable]" clickable position="0 1.6 0">
+            <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
+                swipe-left-right raycaster="objects: [data-raycastable]" clickable position="0 0.25 0">
             </a-entity>
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
+            check-door></a-entity>
 
     </a-scene>
 </body>

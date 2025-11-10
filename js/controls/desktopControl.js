@@ -1,3 +1,4 @@
+//desktopControl.js
 //Arrow-fly-smooth en vez de wasd para movimiento con flechas
 AFRAME.registerComponent("arrow-fly-smooth", {
   schema: {
@@ -71,7 +72,11 @@ AFRAME.registerComponent("scroll-fly-smooth", {
     window.addEventListener(
       "wheel",
       (event) => {
+        // 🔒 Bloquea el scroll si no está en modo vuelo
+        if (!this.el.sceneEl.isFlyMode) return;
+
         event.preventDefault();
+
         // Normaliza deltaY y limita el desplazamiento
         let delta = Math.sign(event.deltaY) * this.data.step;
         this.targetY = THREE.MathUtils.clamp(
