@@ -12,6 +12,8 @@ AFRAME.registerComponent("swipe-up-down", {
     this.el.sceneEl.canvas.addEventListener(
       "touchstart",
       (e) => {
+        // 🔒 Solo si estamos en modo vuelo
+        if (!this.el.sceneEl.isFlyMode) return;
         if (e.touches.length === 1) this.startY = e.touches[0].clientY;
       },
       false
@@ -20,6 +22,9 @@ AFRAME.registerComponent("swipe-up-down", {
     this.el.sceneEl.canvas.addEventListener(
       "touchmove",
       (e) => {
+        // 🔒 Solo si estamos en modo vuelo
+        if (!this.el.sceneEl.isFlyMode) return;
+
         if (e.touches.length === 1 && this.startY !== null) {
           let deltaY = e.touches[0].clientY - this.startY;
           this.targetY -= deltaY * 0.007; // ajuste de sensibilidad (0.01 muy brusco)
@@ -39,6 +44,9 @@ AFRAME.registerComponent("swipe-up-down", {
   },
 
   tick: function () {
+    // 🔒 Solo si estamos en modo vuelo
+    if (!this.el.sceneEl.isFlyMode) return;
+
     const pos = this.el.object3D.position;
     pos.y += (this.targetY - pos.y) * this.data.speed;
   },
@@ -56,24 +64,37 @@ AFRAME.registerComponent("swipe-left-right", {
 AFRAME.registerComponent("touch-hold", {
   schema: {
     speed: { type: "number", default: 0.5 },
+    holdTime: { type: "number", default: 500 }, // Mantener pulsado medio segundo para activar
   },
 
   init: function () {
     this.holding = false;
+    this.activeHold = false;
+    this.holdTimer = null;
 
     // Detectar inicio de toque
     window.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) this.holding = true;
+      if (e.touches.length === 1) {
+        // Inicia el temporizador
+        this.holdTimer = setTimeout(() => {
+          this.activeHold = true; // activamos movimiento
+        }, this.data.holdTime);
+
+        this.holding = true;
+      }
     });
 
     // Detectar fin de toque
     window.addEventListener("touchend", () => {
       this.holding = false;
+      this.activeHold = false;
+      clearTimeout(this.holdTimer);
+      this.holdTimer = null;
     });
   },
 
   tick: function (_, timeDelta) {
-    if (!this.holding) return;
+    if (!this.holding || !this.activeHold) return;
 
     const deltaSeconds = timeDelta / 1000;
     const rig = this.el.object3D;

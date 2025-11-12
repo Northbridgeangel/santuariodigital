@@ -21,7 +21,7 @@
 </head>
 
 <body>
-    <a-scene vr-mode-ui="enabled: false" cursor="rayOrigin: mouse">
+    <a-scene vr-mode-ui="enabled: false" cursor="rayOrigin: mouse" fly-mode>
         <!-- Fondo -->
         <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
@@ -30,7 +30,8 @@
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
         <!-- RIG que agrupa movimiento + cámara -->
-        <a-entity id="rig" position="0 0 0" check-player touch-hold scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
+        <a-entity id="rig" position="0 0 0" check-player touch-hold
+            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
                 swipe-left-right raycaster="objects: [data-raycastable]" clickable position="0 0.25 0">
@@ -40,6 +41,25 @@
         <!-- GLB cargado como escenario estático -->
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             check-door></a-entity>
+
+        <!-- HUD o UI principal, pegada al visor -->
+        <a-entity id="hud" hud-overlay="camera: #camera" scale="1 1 1">
+            <!-- Plano de depuración para ver el HUD padre -->
+            <a-plane width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0">
+            </a-plane>
+
+            <!-- Indicador: FlightMode / Wings -->
+            <a-entity id="hud-wings" position="-3.7 -2.6 -3.5">
+                <a-plane src="./assets/Wings-HUD.svg" width="0.6" height="0.35" transparent="true"
+                    material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
+                </a-plane>
+
+                <a-text id="hud-wings-text" value="OFF" color="white" align="center" position="0 0 0.01" width="2">
+                </a-text>
+            </a-entity>
+
+            <!-- Aquí se podrán añadir otros indicadores del HUD -->
+        </a-entity>
 
     </a-scene>
 </body>
