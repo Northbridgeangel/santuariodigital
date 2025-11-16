@@ -45,16 +45,16 @@
         <!-- HUD o UI principal, pegada al visor -->
         <a-entity id="hud" hud-overlay="camera: #camera" scale="1 1 1">
             <!-- Plano de depuración para ver el HUD padre -->
-            <a-plane width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0">
+            <a-plane hud-autoscale width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0" material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
             </a-plane>
 
             <!-- Indicador: FlightMode / Wings -->
-            <a-entity id="hud-wings" position="-3.7 -2.6 -3.5">
-                <a-plane src="./assets/Wings-HUD.svg" width="0.6" height="0.35" transparent="true"
+            <a-entity id="hud-wings" hud-autoscale hud-relative>
+                <a-plane src="./assets/Wings-HUD.svg" width="0.02" height="0.01" transparent="true"
                     material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
                 </a-plane>
 
-                <a-text id="hud-wings-text" value="OFF" color="white" align="center" position="0 0 0.01" width="2">
+                <a-text id="hud-wings-text" value="OFF" color="white" align="center" width="0.09">
                 </a-text>
             </a-entity>
 
