@@ -101,11 +101,14 @@ AFRAME.registerComponent("hud-autoscale", {
 // ==========================
 AFRAME.registerComponent("hud-relative", {
   schema: {
-    factor: { type: "number", default: 0.4 }, // porcentaje desde el borde
+    scaleWithScreen: { type: "boolean", default: true }, // si queremos ajustar con pantalla
   },
 
   init: function () {
-    this.updatePosition();
+    // Guardamos la posición base que venga del HTML
+    const pos = this.el.getAttribute("position") || { x: 0, y: 0, z: 0 };
+    this.basePos = new THREE.Vector3(pos.x, pos.y, pos.z);
+
     window.addEventListener("resize", () => this.updatePosition());
   },
 
@@ -116,28 +119,26 @@ AFRAME.registerComponent("hud-relative", {
     const plane = parent.querySelector("a-plane");
     if (!plane) return;
 
-    const width = plane.getAttribute("width") || 1;
-    const height = plane.getAttribute("height") || 1;
-
     // Factor de escala según pantalla
     let screenFactor = 1;
     const screenW = window.innerWidth;
     const screenH = window.innerHeight;
-
     if (screenW < 743) screenFactor = screenW / 743;
     if (screenH < 743) screenFactor = Math.min(screenFactor, screenH / 743);
 
-    const finalFactor = this.data.factor * screenFactor;
+    let posX = this.basePos.x;
+    let posY = this.basePos.y;
 
-    // Posición X e Y en función del HUD padre y factor
-    const posX = -finalFactor * width;
-    const posY = -finalFactor * height;
+    if (this.data.scaleWithScreen) {
+      // Aplica el mismo factor de escala que antes, multiplicando la posición base
+      posX = this.basePos.x * screenFactor;
+      posY = this.basePos.y * screenFactor;
+    }
 
-    this.el.object3D.position.set(posX, posY, 0);
+    this.el.object3D.position.set(posX, posY, this.basePos.z || 0);
   },
 
   tick: function () {
-    // Actualiza constantemente por si hud-autoscale está interpolando la escala
     this.updatePosition();
   },
 
