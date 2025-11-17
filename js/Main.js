@@ -1,6 +1,6 @@
 // main.js — crea y llena el namespace
 window.OpenCentralGlobals = {
-  escenario: document.querySelector("#escenario"),
+  escenario: document.querySelector("#escenario"),  
   sceneEl: document.querySelector("a-scene"),
 };
 
@@ -59,7 +59,7 @@ AFRAME.registerComponent("hud-overlay", {
 // ==========================
 AFRAME.registerComponent("hud-autoscale", {
   schema: {
-    baseWidth: { default: 743 }, // resolución base de referencia
+    baseWidth: { default: 743 },
     baseHeight: { default: 743 },
     baseScale: { default: 1 },
   },
@@ -70,23 +70,23 @@ AFRAME.registerComponent("hud-autoscale", {
     this.updateScale = this.updateScale.bind(this);
     window.addEventListener("resize", this.updateScale);
 
-    this.updateScale(); // Escala inicial
+    this.updateScale();
   },
 
   updateScale: function () {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    const factor = Math.min(w / this.data.baseWidth, h / this.data.baseHeight);
+      const factor = Math.min(
+        w / this.data.baseWidth,
+        h / this.data.baseHeight
+      );
+      const s = this.data.baseScale * factor;
+      this.targetScale.set(s, s, s);
 
-    const s = this.data.baseScale * factor;
-
-    // Guardamos la escala destino
-    this.targetScale.set(s, s, s);
   },
 
   tick: function () {
-    // Interpolación suave en cada frame
     this.el.object3D.scale.lerp(this.targetScale, 0.15);
   },
 
@@ -99,7 +99,7 @@ AFRAME.registerComponent("hud-autoscale", {
 // ==========================
 // hud-child-position-scale (POSICIÓN DINÁMICA DEL HIJO DEL HUD)
 // ==========================
-AFRAME.registerComponent("hud-relative", {
+AFRAME.registerComponent("hud-child-position-scale", {
   schema: {
     scaleWithScreen: { type: "boolean", default: true }, // si queremos ajustar con pantalla
   },
@@ -144,5 +144,41 @@ AFRAME.registerComponent("hud-relative", {
 
   remove: function () {
     window.removeEventListener("resize", this.updatePosition);
+  },
+});
+
+
+AFRAME.registerComponent("vr-detector", {
+  init: function () {
+    const scene = this.el.sceneEl;
+
+    // 1. ESPERAR A QUE LA ESCENA CARGUE
+    scene.addEventListener("loaded", () => {
+      this.checkVRInitial();
+    });
+
+    // 2. DETECTAR CAMBIO A VR
+    scene.addEventListener("enter-vr", () => {
+      console.log("Entramos en VR");
+      window.APP.isVR = true;
+    });
+
+    // 3. DETECTAR SALIDA DE VR
+    scene.addEventListener("exit-vr", () => {
+      console.log("Salimos de VR");
+      window.APP.isVR = false;
+    });
+  },
+
+  checkVRInitial: function () {
+    const scene = this.el.sceneEl;
+
+    // A-Frame indica VR activo con esta flag
+    const isVrNow = scene.is("vr-mode");
+
+    window.APP = window.APP || {};
+    window.APP.isVR = isVrNow;
+
+    console.log("Estado VR inicial:", isVrNow ? "VR" : "Desktop");
   },
 });

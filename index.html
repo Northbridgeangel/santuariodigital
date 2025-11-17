@@ -9,6 +9,14 @@
     <!-- A-Frame 1.5.0 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
+    <!-- Componente para texto 3D con volumen -->
+    <script
+        src="https://unpkg.com/aframe-text-geometry-component@0.5.2/dist/aframe-text-geometry-component.min.js"></script>
+
+    <!-- Troika Text para A-Frame -->
+    <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
+
+
     <!-- Componentes custom -->
     <script type="module" src="./js/Main.js"></script>
     <script src="./js/controls/desktopControl.js"></script>
@@ -18,6 +26,7 @@
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
+    <script src="./js/components/text3d.js"></script>
 </head>
 
 <body>
@@ -42,22 +51,36 @@
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             check-door></a-entity>
 
+        <!-- Indicador moviendo: FlightMode / Wings -->
+        <a-entity id="hud-wings" position="0.355 1 3.005">
+            <a-entity id="hud-wings-text"
+                troika-text="value: OFF; font: ./assets/fonts/Roboto-VariableFont_wdth,wght.ttf; depth: 3; fontSize: 0.15; color: white"
+                rotation="0 180 0" position="0 0 0.01">
+            </a-entity>
+
+            <a-entity id="texto3d" text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.15; height: 0.03; curveSegments: 12"
+        material="color: white; side: double"
+        rotation="0 180 0" position="0 0 0.05">
+            </a-entity>
+        </a-entity>
+
+
         <!-- HUD o UI principal, pegada al visor -->
         <a-entity id="hud" hud-overlay="camera: #camera" scale="1 1 1">
             <!-- Plano de depuración para ver el HUD padre -->
-            <a-plane hud-autoscale width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0" material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
+            <a-plane hud-autoscale width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0"
+                material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
             </a-plane>
 
-            <!-- Indicador: FlightMode / Wings -->
-            <a-entity id="hud-wings" hud-autoscale hud-relative position="-0.06 -0.04 0">
+            <!-- Indicador FlightMode que será botónes YES/NO -->
+            <a-entity id="y-n" hud-autoscale hud-child-position-scale position="-0.06 -0.04 0">
                 <a-plane src="./assets/Wings-HUD.svg" width="0.02" height="0.01" transparent="true"
                     material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
                 </a-plane>
 
-                <a-text id="hud-wings-text" value="OFF" color="white" align="center" width="0.09">
+                <a-text id="y-n-text" value="YES" color="white" align="center" width="0.09">
                 </a-text>
             </a-entity>
-
             <!-- Aquí se podrán añadir otros indicadores del HUD -->
         </a-entity>
 

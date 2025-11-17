@@ -204,14 +204,19 @@ AFRAME.registerComponent("check-door", {
 
     const updateHUDWings = (state) => {
       if (!hudWings || !hudText) return;
-      hudText.setAttribute("value", state);
+
+      // Actualizar opacidad de fondo
       hudWings.object3D.traverse((obj) => {
         if (obj.isMesh) {
-          obj.material.opacity = (state === "ON") ? 1 : 0.5;
+          obj.material.opacity = state === "ON" ? 1 : 0.5;
           obj.material.transparent = true;
           obj.material.needsUpdate = true;
         }
       });
+
+      // Actualizar texto Troika
+      hudText.setAttribute("troika-text", "value", state); // state = "ON" o "OFF"
+      hudText.components["troika-text"].update(); // fuerza actualización
     };
 
     // Inicializar HUD la primera vez
