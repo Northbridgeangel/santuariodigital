@@ -131,6 +131,7 @@ AFRAME.registerComponent("fly-mode", {
   },
 });
 
+
 // ==========================
 // check-door
 // ==========================
@@ -202,22 +203,61 @@ AFRAME.registerComponent("check-door", {
     const hudWings = this.hudWings;
     const hudText = this.hudText;
 
-    const updateHUDWings = (state) => {
-      if (!hudWings || !hudText) return;
+const updateHUDWings = (state) => {
+  if (!hudWings || !hudText) return;
 
-      // Actualizar opacidad de fondo
-      hudWings.object3D.traverse((obj) => {
-        if (obj.isMesh) {
-          obj.material.opacity = state === "ON" ? 1 : 0.5;
-          obj.material.transparent = true;
-          obj.material.needsUpdate = true;
-        }
-      });
+  // Fondo del HUD
+  hudWings.object3D.traverse((obj) => {
+    if (obj.isMesh) {
+      if (state === "ON") {
+        obj.material = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 1,
+          emissive: 0xffffff,
+          emissiveIntensity: 1,
+          side: THREE.DoubleSide,
+        });
+      } else {
+        obj.material = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.5,
+          side: THREE.DoubleSide,
+        });
+      }
+      obj.material.needsUpdate = true;
+    }
+  });
 
-      // Actualizar texto Troika
-      hudText.setAttribute("troika-text", "value", state); // state = "ON" o "OFF"
-      hudText.components["troika-text"].update(); // fuerza actualización
-    };
+  // Texto 3D volumétrico (text-geometry)
+  hudText.setAttribute("text-geometry", "value", state);
+  if (
+    hudText.components["text-geometry"] &&
+    hudText.components["text-geometry"].mesh
+  ) {
+    if (state === "ON") {
+      hudText.components["text-geometry"].mesh.material =
+        new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 1,
+          emissive: 0xffffff,
+          emissiveIntensity: 1,
+          side: THREE.DoubleSide,
+        });
+    } else {
+      hudText.components["text-geometry"].mesh.material =
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.5,
+          side: THREE.DoubleSide,
+        });
+    }
+    hudText.components["text-geometry"].mesh.material.needsUpdate = true;
+  }
+};
 
     // Inicializar HUD la primera vez
     if (!this.hudInitialized) {
@@ -231,16 +271,16 @@ AFRAME.registerComponent("check-door", {
     if (isIntersecting && !this.lastIntersection) {
       // Cruce detectado → toggle
       this.triggered = !this.triggered;
-      //console.log(this.triggered ? "✅ Collider TRIGGERED" : "❌ Collider RESET");
 
       updateHUDWings(this.triggered ? "ON" : "OFF");
 
       const flyComp = this.el.sceneEl.components["fly-mode"];
       if (flyComp) flyComp.toggleFlyMode();
-      else console.warn("⚠️ No se encontró el componente fly-mode en la escena");
+      else
+        console.warn("⚠️ No se encontró el componente fly-mode en la escena");
     }
 
     // Guardamos estado para el siguiente frame
     this.lastIntersection = isIntersecting;
-  }
+  },
 });
