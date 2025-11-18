@@ -21,6 +21,7 @@
     <script type="module" src="./js/Main.js"></script>
     <script src="./js/controls/desktopControl.js"></script>
     <script src="./js/controls/mobileControl.js"></script>
+    <script src="./js/controls/vr-controls.js"></script>
     <script src="./js/controls/fly-mode.js"></script>
     <script src="./js/components/handleClick.js"></script>
     <script src="./js/components/mirrormaterial.js"></script>
@@ -39,7 +40,7 @@
 
         <!-- RIG que agrupa movimiento + cámara -->
         <a-entity id="rig" position="0 0 0" check-player touch-hold
-            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
+            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" vr-controls>
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
                 swipe-left-right raycaster="objects: [data-raycastable]" clickable position="0 0.25 0">
@@ -48,13 +49,15 @@
             <!-- WebXR controllers para VR con cursor visible -->
             <a-entity laser-controls="hand: left" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-            
+
             <a-entity laser-controls="hand: right" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
         </a-entity>
