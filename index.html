@@ -27,6 +27,38 @@
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
+
+    <script>
+        AFRAME.registerComponent("vr-scale-rig", {
+            schema: {
+                vrScale: { type: "number", default: 0.5 }, // factor de escala VR
+                playerHeight: { type: "number", default: 1.6 } // altura real jugador
+            },
+
+            init: function () {
+                const rig = document.querySelector("#rig");
+                if (!rig) return;
+
+                this.el.sceneEl.addEventListener("enter-vr", () => {
+                    // Aplicar la escala al rig SOLO en VR
+                    rig.setAttribute("scale", `${this.data.vrScale} ${this.data.vrScale} ${this.data.vrScale}`);
+
+                    const alturaEscalada = this.data.playerHeight * this.data.vrScale;
+                    console.log("🧍 Altura jugador original:", this.data.playerHeight, "m");
+                    console.log("🧍 Altura jugador escalada:", alturaEscalada.toFixed(3), "m");
+                    console.log("📏 Escala aplicada al rig:", this.data.vrScale);
+                });
+
+                // Opcional: restaurar escala al salir de VR
+                this.el.sceneEl.addEventListener("exit-vr", () => {
+                    rig.setAttribute("scale", "1 1 1");
+                });
+            }
+        });
+    </script>
+
+
+
 </head>
 
 <body>
@@ -47,24 +79,25 @@
             </a-entity>
 
             <!-- WebXR controllers para VR con cursor visible -->
-            <a-entity laser-controls="hand: left" raycaster="objects: .interactable">
+            <a-entity laser-controls="hand: left" tracked-controls="hand: left" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
                     material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
 
-            <a-entity laser-controls="hand: right" raycaster="objects: .interactable">
+            <a-entity laser-controls="hand: right" tracked-controls="hand: right" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
                     material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
+
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
-            check-door></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door
+            vr-scale-rig></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
