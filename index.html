@@ -44,6 +44,19 @@
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
                 swipe-left-right raycaster="objects: [data-raycastable]" clickable position="0 0.25 0">
             </a-entity>
+
+            <!-- WebXR controllers para VR con cursor visible -->
+            <a-entity laser-controls="hand: left" raycaster="objects: .interactable">
+                <a-entity cursor="fuse: false; rayOrigin: controller"
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                </a-entity>
+            </a-entity>
+            
+            <a-entity laser-controls="hand: right" raycaster="objects: .interactable">
+                <a-entity cursor="fuse: false; rayOrigin: controller"
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                </a-entity>
+            </a-entity>
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
