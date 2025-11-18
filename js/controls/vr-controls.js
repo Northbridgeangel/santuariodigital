@@ -28,35 +28,50 @@ AFRAME.registerComponent("vr-controls", {
     });
 
     // ===========================
-    // MOVIMIENTO (Thumbstick / Joystick)
+    // 1️⃣ Evento que controla el movimiento
     // ===========================
     const moveRig = (e) => {
       // e.detail.axes[0] = X, e.detail.axes[1] = Y del thumbstick
-      const x = e.detail.axes[0];
-      const y = e.detail.axes[1];
 
-      // Deadzone
-      if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return;
+      // ===========================
+      // 2️⃣ Lectura de ejes y deadzone
+      // ===========================
+      const x = e.detail.axes[0]; // movimiento horizontal del joystick (izquierda/derecha)
+      const y = e.detail.axes[1]; // movimiento vertical del joystick (adelante/detrás)
 
-      // Dirección de la cámara
+      // Deadzone para evitar micro-movimientos
+      if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return; //Si el joystick está demasiado cerca del centro, no hacemos nada.
+
+      // ===========================
+      // 3️⃣ Calculamos dirección de la cámara
+      // ===========================
       const dir = new THREE.Vector3();
       this.camera.object3D.getWorldDirection(dir);
-      dir.y = 0;
+      dir.y = 0; // mantener movimiento en plano horizontal
       dir.normalize();
 
-      // Vector lateral
+      // Vector lateral perpendicular a la vista
       const rightVec = new THREE.Vector3();
       rightVec.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
 
-      // Movimiento final
+      // ===========================
+      // 4️⃣ Calculamos movimiento final
+      // ===========================
       const move = new THREE.Vector3();
-      move.add(dir.multiplyScalar(-y * this.data.speed)); // adelante/atrás
-      move.add(rightVec.multiplyScalar(x * this.data.speed)); // izquierda/derecha
 
+      move.add(dir.multiplyScalar(-y * this.data.speed)); // adelante / detrás
+      move.add(rightVec.multiplyScalar(x * this.data.speed)); // derecha / izquierda
+      // arriba / abajo no está aplicado, si quieres subir o bajar puedes usar rig.position.y
+
+      // ===========================
+      // 5️⃣ Aplicamos movimiento al rig
+      // ===========================
       this.rig.object3D.position.add(move);
     };
 
-    // Aplicar movimiento a ambos mandos para robustez
+    // ===========================
+    // 6️⃣ Escucha movimientos del joystick
+    // ===========================
     this.right.addEventListener("axismove", moveRig);
     this.left.addEventListener("axismove", moveRig);
   },

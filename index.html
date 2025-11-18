@@ -31,7 +31,7 @@
     <script>
         AFRAME.registerComponent("vr-scale-rig", {
             schema: {
-                vrScale: { type: "number", default: 0.35 }, // factor de escala VR
+                vrScale: { type: "number", default: 0.25 }, // factor de escala VR
                 playerHeight: { type: "number", default: 1.6 } // altura real jugador
             },
 
@@ -79,17 +79,15 @@
             </a-entity>
 
             <!-- WebXR controllers para VR con cursor visible -->
-            <a-entity laser-controls="hand: left" tracked-controls="hand: left" raycaster="objects: .interactable">
+            <a-entity laser-controls="hand: left" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
-                    material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-
-            <a-entity laser-controls="hand: right" tracked-controls="hand: right" raycaster="objects: .interactable">
+            
+            <a-entity laser-controls="hand: right" raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
-                    material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
 
