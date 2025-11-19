@@ -63,7 +63,8 @@
 </head>
 
 <body>
-    <a-scene vr-mode-ui="enabled: false" cursor="rayOrigin: mouse" fly-mode>
+    <a-scene webxr="optionalFeatures: local-floor, bounded-floor" vr-mode-ui="enabled: false" cursor="rayOrigin: mouse"
+        fly-mode>
         <!-- Fondo -->
         <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
@@ -72,11 +73,11 @@
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
         <!-- RIG que agrupa movimiento + cámara -->
-        <a-entity id="rig" position="0 0 0" check-player touch-hold
+        <a-entity id="rig" vr-scale-rig position="0 0 0" check-player touch-hold
             scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" vr-controls>
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
-                swipe-left-right raycaster="objects: .interactable" clickable position="0 0.25 0">
+                swipe-left-right clickable position="0 0.25 0">
             </a-entity>
 
             <!-- WebXR controllers para VR con cursor visible -->
@@ -99,8 +100,7 @@
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door
-            vr-scale-rig class="interactable"></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door class="interactable"></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015" auto-raycast-tag>
@@ -110,7 +110,6 @@
                 position="0 0 0.01"
                 animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
             </a-entity>
-        </a-entity>
         </a-entity>
 
 
