@@ -27,6 +27,7 @@
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
+    <script src="./js/components/autoRaycastTag.js"></script>
 
     <script>
         AFRAME.registerComponent("vr-scale-rig", {
@@ -75,19 +76,23 @@
             scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" vr-controls>
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
-                swipe-left-right raycaster="objects: [data-raycastable]" clickable position="0 0.25 0">
+                swipe-left-right raycaster="objects: .interactable" clickable position="0 0.25 0">
             </a-entity>
 
             <!-- WebXR controllers para VR con cursor visible -->
-            <a-entity laser-controls="hand: left" raycaster="objects: .interactable">
+            <a-entity laser-controls="hand: left" gamepad-controls="hand: left; model: false"
+                raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-            
-            <a-entity laser-controls="hand: right" raycaster="objects: .interactable">
+
+            <a-entity laser-controls="hand: right" gamepad-controls="hand: right; model: false"
+                raycaster="objects: .interactable">
                 <a-entity cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
 
@@ -98,7 +103,7 @@
             vr-scale-rig class="interactable"></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
-        <a-entity id="hud-wings" position="0.44 0.98 3.015">
+        <a-entity id="hud-wings" position="0.44 0.98 3.015" auto-raycast-tag>
             <a-entity id="hud-wings-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
                 material="color: white; side: double; transparent: true; opacity: 0.5" rotation="0 180 0"
@@ -117,7 +122,7 @@
             </a-plane>
 
             <!-- Indicador FlightMode que será botónes YES/NO -->
-            <a-entity id="y-n" hud-autoscale hud-child-position-scale position="-0.06 -0.04 0">
+            <a-entity id="y-n" class="interactable" hud-autoscale hud-child-position-scale position="-0.06 -0.04 0">
                 <a-plane src="./assets/Wings-HUD.svg" width="0.02" height="0.01" transparent="true"
                     material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
                 </a-plane>
