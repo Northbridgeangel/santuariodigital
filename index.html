@@ -63,8 +63,8 @@
 </head>
 
 <body>
-    <a-scene webxr="optionalFeatures: local-floor, bounded-floor" vr-mode-ui cursor="rayOrigin: mouse"
-        fly-mode>
+    <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
+        cursor="rayOrigin: mouse" fly-mode>
         <!-- Fondo -->
         <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
@@ -84,21 +84,24 @@
             <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left"
                 gamepad-controls="hand: left; model: false" raycaster="objects: .interactable; far: 30">
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-            
+
             <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right"
                 gamepad-controls="hand: right; model: false" raycaster="objects: .interactable; far: 30">
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
 
         </a-entity>
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door class="interactable"></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door
+            class="interactable"></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015" auto-raycast-tag>
