@@ -28,6 +28,7 @@
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
     <script src="./js/components/autoRaycastTag.js"></script>
+    <script src="./js/debug-overlay.js"></script>
 
     <script>
         AFRAME.registerComponent("vr-scale-rig", {
@@ -63,6 +64,60 @@
 </head>
 
 <body>
+    <!-- $$$$$$$$$$$$$ -->
+    <!-- DEBUG OVERLAY -->
+    <!-- $$$$$$$$$$$$$ -->
+    <div id="debug-toggle" style="
+            position:fixed;
+            top:10px;
+            right:10px;
+            z-index:999999;
+            background:#111;
+            color:#0f0;
+            padding:8px 12px;
+            border-radius:6px;
+            font-size:14px;
+            cursor:pointer;
+            opacity:0.8;">
+        Debug
+    </div>
+    
+    <div id="debug-console" style="
+            display:none;
+            position:fixed;
+            top:0;
+            right:0;
+            width:50%;
+            height:100%;
+            overflow-y:auto;
+            background:#000;
+            font-family:monospace;
+            font-size:12px;
+            padding:12px;
+            z-index:999998;
+            opacity:0.85;
+            border-left:2px solid #0f0;">
+    
+        <!-- Área de logs -->
+        <div id="debug-log"></div>
+    
+        <!-- Línea de comandos -->
+        <input id="debug-input" type="text" placeholder="Escribe un comando JS y pulsa Enter" style="
+                width:100%;
+                margin-top:10px;
+                background:#111;
+                color:#0f0;
+                border:1px solid #0f0;
+                padding:6px;
+                font-family:monospace;
+                font-size:12px;">
+    </div>
+
+
+
+    <!-- $$$$$$$$$$$$$ -->
+    <!--  EL PROYECTO  -->
+    <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
         cursor="rayOrigin: mouse" fly-mode>
         <!-- Fondo -->

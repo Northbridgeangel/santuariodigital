@@ -99,7 +99,7 @@ AFRAME.registerComponent("fly-mode", {
     this.text = document.getElementById("flyModeText");
 
     console.log(
-      "🪶 FlyMode inicializado | Estado:",
+      "✈️ FlyMode inicializado | Estado:",
       this.isFlying ? "Activo" : "Desactivado"
     );
 
@@ -130,7 +130,6 @@ AFRAME.registerComponent("fly-mode", {
     this.updateWingsHUD(this.isFlying);
   },
 });
-
 
 // ==========================
 // check-door
@@ -203,61 +202,61 @@ AFRAME.registerComponent("check-door", {
     const hudWings = this.hudWings;
     const hudText = this.hudText;
 
-const updateHUDWings = (state) => {
-  if (!hudWings || !hudText) return;
+    const updateHUDWings = (state) => {
+      if (!hudWings || !hudText) return;
 
-  // Fondo del HUD
-  hudWings.object3D.traverse((obj) => {
-    if (obj.isMesh) {
-      if (state === "ON") {
-        obj.material = new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 1,
-          emissive: 0xffffff,
-          emissiveIntensity: 1,
-          side: THREE.DoubleSide,
-        });
-      } else {
-        obj.material = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.5,
-          side: THREE.DoubleSide,
-        });
+      // Fondo del HUD
+      hudWings.object3D.traverse((obj) => {
+        if (obj.isMesh) {
+          if (state === "ON") {
+            obj.material = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 1,
+              emissive: 0xffffff,
+              emissiveIntensity: 1,
+              side: THREE.DoubleSide,
+            });
+          } else {
+            obj.material = new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.5,
+              side: THREE.DoubleSide,
+            });
+          }
+          obj.material.needsUpdate = true;
+        }
+      });
+
+      // Texto 3D volumétrico (text-geometry)
+      hudText.setAttribute("text-geometry", "value", state);
+      if (
+        hudText.components["text-geometry"] &&
+        hudText.components["text-geometry"].mesh
+      ) {
+        if (state === "ON") {
+          hudText.components["text-geometry"].mesh.material =
+            new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 1,
+              emissive: 0xffffff,
+              emissiveIntensity: 1,
+              side: THREE.DoubleSide,
+            });
+        } else {
+          hudText.components["text-geometry"].mesh.material =
+            new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.5,
+              side: THREE.DoubleSide,
+            });
+        }
+        hudText.components["text-geometry"].mesh.material.needsUpdate = true;
       }
-      obj.material.needsUpdate = true;
-    }
-  });
-
-  // Texto 3D volumétrico (text-geometry)
-  hudText.setAttribute("text-geometry", "value", state);
-  if (
-    hudText.components["text-geometry"] &&
-    hudText.components["text-geometry"].mesh
-  ) {
-    if (state === "ON") {
-      hudText.components["text-geometry"].mesh.material =
-        new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 1,
-          emissive: 0xffffff,
-          emissiveIntensity: 1,
-          side: THREE.DoubleSide,
-        });
-    } else {
-      hudText.components["text-geometry"].mesh.material =
-        new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.5,
-          side: THREE.DoubleSide,
-        });
-    }
-    hudText.components["text-geometry"].mesh.material.needsUpdate = true;
-  }
-};
+    };
 
     // Inicializar HUD la primera vez
     if (!this.hudInitialized) {
