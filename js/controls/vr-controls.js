@@ -1,42 +1,32 @@
 //vr-controls.js
 AFRAME.registerComponent("vr-controls", {
-  schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad de movimiento
-  },
-
+  schema: { speed: { type: "number", default: 0.05 } },
   init: function () {
-    console.log("🎮 VR Controls inicializado");
-
     this.rig = document.querySelector("#rig");
     this.camera = document.querySelector("#camera");
 
-    // Escuchar cuando un controlador VR se conecta
-    this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
-      const controller = evt.detail.target; // el <a-entity> del controlador
-      const hand = controller.getAttribute("laser-controls")?.hand || "unknown";
+    // Esperar a que la escena esté lista
+    this.el.sceneEl.addEventListener("loaded", () => {
+      this.right = document.querySelector('[laser-controls][hand="right"]');
+      this.left = document.querySelector('[laser-controls][hand="left"]');
 
-      console.log(`🕹️ Controlador conectado: ${hand}`, controller);
+      if (!this.right || !this.left) {
+        console.warn("⚠️ No se encontraron ambos controladores VR");
+        return;
+      }
 
-      // =============================
-      // CLICK (Trigger)
-      // =============================
-      controller.addEventListener("triggerdown", () => {
-        console.log(`🔵 Trigger pulsado (${hand})`);
+      // Click trigger
+      this.right.addEventListener("triggerdown", () => {
+        console.log("🔵 VR Trigger → CLICK");
         this.camera.dispatchEvent(new Event("click"));
       });
 
-      // =============================
-      // MOVIMIENTO con thumbstick
-      // =============================
-      controller.addEventListener("axismove", (e) => {
-        // Solo si es el joystick derecho o izquierdo según quieras
-        const x = e.detail.axes[0]; // horizontal
-        const y = e.detail.axes[1]; // vertical
-
-        // Deadzone para evitar micro-movimientos
+      // Movimiento
+      const moveRig = (e) => {
+        const x = e.detail.axes[0];
+        const y = e.detail.axes[1];
         if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return;
 
-        // Dirección de la cámara
         const dir = new THREE.Vector3();
         this.camera.object3D.getWorldDirection(dir);
         dir.y = 0;
@@ -50,7 +40,10 @@ AFRAME.registerComponent("vr-controls", {
         move.add(rightVec.multiplyScalar(x * this.data.speed));
 
         this.rig.object3D.position.add(move);
-      });
+      };
+
+      this.right.addEventListener("axismove", moveRig);
+      this.left.addEventListener("axismove", moveRig);
     });
   },
 });
