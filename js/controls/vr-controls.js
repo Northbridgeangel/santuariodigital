@@ -1,127 +1,64 @@
 //vr-controls.js
-AFRAME.registerComponent("vr-controls", {
-  schema: { speed: { type: "number", default: 0.05 } },
+AFRAME.registerComponent("joystick-locomotion", {
+  schema: {
+    speed: { type: "number", default: 1.5 },
+  },
 
-  init: function () {
-    // Asegúrate de que este ID coincide EXACTO con tu rig
-    this.rig = document.querySelector("#rig") || document.querySelector("#Rig");
+  init() {
+    this.rig = document.querySelector("#rig");
     this.camera = document.querySelector("#camera");
+    this.left = document.querySelector("#controller-left");
+    this.right = document.querySelector("#controller-right");
 
-    this.leftCtrl = null;
-    this.rightCtrl = null;
-    this.leftPad = null;
-    this.rightPad = null;
+    this.joystick = { x: 0, y: 0 };
 
-    console.log("[VR] Componente cargado");
+    const joystickMove = (evt) => {
+      const axes = evt.detail.axis;
+      if (!axes) return;
 
-    // -----------------------------------------
-    // LOCALIZAR CONTROLADORES UNA SOLA VEZ
-    // -----------------------------------------
-    const locateControllers = () => {
-      this.leftCtrl = document.querySelector('[laser-controls][hand="left"]');
-      this.rightCtrl = document.querySelector('[laser-controls][hand="right"]');
+      this.joystick.x = axes[0];
+      this.joystick.y = axes[1];
 
-      if (this.leftCtrl && this.leftCtrl.components["tracked-controls"]) {
-        this.leftPad = this.leftCtrl.components["tracked-controls"].controller;
-        console.log("[CTRL] Controlador LEFT detectado");
-      }
-
-      if (this.rightCtrl && this.rightCtrl.components["tracked-controls"]) {
-        this.rightPad =
-          this.rightCtrl.components["tracked-controls"].controller;
-        console.log("[CTRL] Controlador RIGHT detectado");
-      }
-
-      if (!this.leftCtrl && !this.rightCtrl) {
-        console.log("[CTRL] No se detectan controladores");
-      }
+      console.log(
+        `[joy] Axes → x:${this.joystick.x.toFixed(
+          2
+        )}  y:${this.joystick.y.toFixed(2)}`
+      );
     };
 
-    // -----------------------------------------
-    // MOVIMIENTO DEL RIG
-    // -----------------------------------------
-    const moveRig = () => {
-      const gp = this.leftPad || this.rightPad;
+    this.left.addEventListener("axismove", joystickMove);
+    this.right.addEventListener("axismove", joystickMove);
 
-      if (!gp || !gp.axes) return;
+    console.log("[joy] Locomoción por joystick inicializada ✔️");
+  },
 
-      // Quest 2/3 suele usar axes[2] y [3]
-      const x = gp.axes[2] ?? gp.axes[0];
-      const y = gp.axes[3] ?? gp.axes[1];
+  tick(time, delta) {
+    if (!this.rig || !this.camera) return;
 
-      if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return;
+    if (Math.abs(this.joystick.x) < 0.05 && Math.abs(this.joystick.y) < 0.05)
+      return;
 
-      console.log("Joystick: X=" + x.toFixed(2) + " | Y=" + y.toFixed(2));
+    const dt = delta / 1000;
+    const speed = this.data.speed;
 
-      const forward = new THREE.Vector3();
-      this.camera.object3D.getWorldDirection(forward);
-      forward.setY(0).normalize();
+    const cameraObj = this.camera.object3D;
+    const rigObj = this.rig.object3D;
 
-      const right = new THREE.Vector3();
-      right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+    const forward = new THREE.Vector3();
+    cameraObj.getWorldDirection(forward);
+    forward.y = 0;
+    forward.normalize();
 
-      const movement = new THREE.Vector3();
-      movement.add(forward.multiplyScalar(-y * this.data.speed));
-      movement.add(right.multiplyScalar(x * this.data.speed));
+    const right = new THREE.Vector3();
+    right
+      .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+      .negate()
+      .normalize();
 
-      if (this.rig) {
-        this.rig.object3D.position.add(movement);
-      }
-    };
+    const moveX = right.multiplyScalar(this.joystick.x * speed * dt);
+    const moveZ = forward.multiplyScalar(-this.joystick.y * speed * dt);
 
-    // -----------------------------------------
-    // CLICK SOBRE MALLAS CON BOTÓN A
-    // -----------------------------------------
-    const clickCast = () => {
-      if (!this.rightPad || !this.rightPad.buttons) return;
-
-      const AButton = this.rightPad.buttons[0];
-      if (!AButton || !AButton.pressed) return;
-
-      console.log("[BTN] A presionado → click lanzado");
-
-      if (!this.rightCtrl) return;
-
-      const raycaster = this.rightCtrl.components.raycaster;
-      if (!raycaster) return;
-
-      const hits = raycaster.intersections;
-      if (hits.length > 0) {
-        const el = hits[0].object.el;
-        console.log("[OBJ] Click en: " + (el.id || el.className));
-        el.emit("click");
-      }
-    };
-
-    // -----------------------------------------
-    // LOOP PRINCIPAL (solo cosas dinámicas)
-    // -----------------------------------------
-    this.tick = () => {
-      moveRig();
-      clickCast();
-    };
-
-    // -----------------------------------------
-    // EVENTOS XR
-    // -----------------------------------------
-    this.el.sceneEl.addEventListener("loaded", () => {
-      console.log("[VR] Escena cargada");
-      locateControllers();
-    });
-
-    this.el.sceneEl.addEventListener("enter-vr", () => {
-      console.log("[VR] Entrando en VR");
-      locateControllers();
-    });
-
-    this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
-      console.log("[CTRL] Conectado: " + evt.detail.name);
-      locateControllers();
-    });
-
-    this.el.sceneEl.addEventListener("controllerdisconnected", (evt) => {
-      console.log("[CTRL] Desconectado: " + evt.detail.name);
-      locateControllers();
-    });
+    rigObj.position.add(moveX);
+    rigObj.position.add(moveZ);
   },
 });
