@@ -136,18 +136,24 @@
             </a-entity>
 
             <!-- WebXR controllers para VR con cursor visible -->
-            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left"
-                gamepad-controls="hand: left; model: false" raycaster="objects: .interactable; far: 30">
+            <!-- CONTROLADOR IZQUIERDO -->
+            <a-entity id="controller-left" role="vr-controller"
+                hand-controls="hand: left; handModelStyle: lowpoly; color: white; model: false">
+            
+                <!-- Cursor visible -->
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    raycaster="objects: .interactable; far: 30" geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
                     material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-
-            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right"
-                gamepad-controls="hand: right; model: false" raycaster="objects: .interactable; far: 30">
+            
+            <!-- CONTROLADOR DERECHO -->
+            <a-entity id="controller-right" role="vr-controller"
+                hand-controls="hand: right; handModelStyle: lowpoly; color: white; model: false">
+            
+                <!-- Cursor visible -->
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    raycaster="objects: .interactable; far: 30" geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
                     material="color: white; shader: flat">
                 </a-entity>
             </a-entity>

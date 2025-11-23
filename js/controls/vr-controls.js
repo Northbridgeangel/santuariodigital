@@ -1,5 +1,4 @@
-//vr-controls.js
-//vr-controls.js
+// vr-controls.js
 AFRAME.registerComponent("vr-controls", {
   schema: { speed: { type: "number", default: 0.05 } },
 
@@ -7,17 +6,16 @@ AFRAME.registerComponent("vr-controls", {
     this.rig = document.querySelector("#rig");
     this.camera = document.querySelector("#camera");
 
-    // Contenedores de controladores
     this.right = null;
     this.left = null;
 
-    // -------------------------------
-    // FUNCIONES DE CONTROLADORES
-    // -------------------------------
+    // -------------------------------------
+    // DETECTAR CONTROLADORES
+    // -------------------------------------
 
     const locateControllers = () => {
-      this.right = document.querySelector('[laser-controls][hand="right"]');
-      this.left = document.querySelector('[laser-controls][hand="left"]');
+      this.right = document.querySelector("#controller-right");
+      this.left = document.querySelector("#controller-left");
 
       if (!this.right && !this.left) {
         console.log("[loc] No se detectan controladores VR");
@@ -27,28 +25,12 @@ AFRAME.registerComponent("vr-controls", {
       }
     };
 
-    const attachEvents = () => {
-      if (this.right) {
-        // Trigger
-        this.right.addEventListener("triggerdown", () => {
-          console.log("[loc] VR Trigger → CLICK");
-          this.camera.dispatchEvent(new Event("click"));
-        });
-
-        // Movimiento
-        this.right.addEventListener("axismove", moveRig);
-      }
-
-      if (this.left) {
-        // Movimiento
-        this.left.addEventListener("axismove", moveRig);
-      }
-    };
-
     // -------------------------------------
-    // MOVIMIENTO — TU MISMO CÓDIGO ORIGINAL
+    // MOVIMIENTO — MISMO CÓDIGO TUYO
     // -------------------------------------
     const moveRig = (e) => {
+      if (!e.detail || !e.detail.axes) return;
+
       const x = e.detail.axes[0];
       const y = e.detail.axes[1];
       if (Math.abs(x) < 0.1 && Math.abs(y) < 0.1) return;
@@ -69,21 +51,42 @@ AFRAME.registerComponent("vr-controls", {
     };
 
     // -------------------------------------
-    // EVENTOS XR  → AQUÍ ESTÁ LA MAGIA NUEVA
+    // ENGANCHAR EVENTOS
+    // -------------------------------------
+    const attachEvents = () => {
+      if (this.right) {
+        this.right.addEventListener("triggerdown", () => {
+          console.log("[loc] VR Trigger → CLICK");
+          this.camera.dispatchEvent(new Event("click"));
+        });
+
+        this.right.addEventListener("axismove", moveRig);
+      }
+
+      if (this.left) {
+        this.left.addEventListener("axismove", moveRig);
+      }
+    };
+
+    // -------------------------------------
+    // EVENTOS XR
     // -------------------------------------
 
-    // Cuando la escena carga
+    // Escena cargada
     this.el.sceneEl.addEventListener("loaded", () => {
-      console.log("[loc] Escena cargada → Buscando controladores…");
+      console.log("[loc] Escena cargada → buscando controladores…");
       locateControllers();
       attachEvents();
     });
 
     // Entras en VR
     this.el.sceneEl.addEventListener("enter-vr", () => {
-      console.log("[loc] Modo VR activado → Rebuscando controladores…");
-      locateControllers();
-      attachEvents();
+      console.log("[loc] Modo VR activado → rebuscando controladores…");
+      // Se reenganchan porque WebXR los activa aquí realmente
+      setTimeout(() => {
+        locateControllers();
+        attachEvents();
+      }, 300);
     });
 
     // Sales de VR
@@ -91,28 +94,22 @@ AFRAME.registerComponent("vr-controls", {
       console.log("[loc] Modo VR desactivado");
     });
 
-    // Cuando un mando se conecta
+    // Mando conectado
     this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
       const hand =
-        evt.detail.name ||
-        evt.detail.component?.data?.hand ||
-        "unknown";
+        evt.detail.name || evt.detail.component?.data?.hand || "unknown";
 
       console.log(`[loc] Controlador conectado: ${hand}`);
-
       locateControllers();
       attachEvents();
     });
 
-    // Cuando un mando se desconecta
+    // Mando desconectado
     this.el.sceneEl.addEventListener("controllerdisconnected", (evt) => {
       const hand =
-        evt.detail.name ||
-        evt.detail.component?.data?.hand ||
-        "unknown";
+        evt.detail.name || evt.detail.component?.data?.hand || "unknown";
 
       console.log(`[loc] Controlador desconectado: ${hand}`);
-
       locateControllers();
     });
   },
