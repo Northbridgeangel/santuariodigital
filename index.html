@@ -128,8 +128,8 @@
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
         <!-- RIG que agrupa movimiento + cámara -->
-        <a-entity id="rig" vr-scale-rig vr-controls position="0 0 0" check-player touch-hold
-            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" joystick-locomotion="speed: 1.4">
+        <a-entity id="rig" vr-scale-rig position="0 0 0" check-player touch-hold
+            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" vr-locomotion>
         
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down swipe-left-right
