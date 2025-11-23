@@ -1,18 +1,19 @@
 //vr-controls.js
 AFRAME.registerComponent("vr-locomotion", {
   schema: {
-    speed: { type: "number", default: 0.05 }, // velocidad de locomoción
+    speed: { type: "number", default: 0.05 },
+    invertY: { type: "boolean", default: true }, // para invertir eje vertical si es necesario
   },
 
   init: function () {
     this.rig = document.querySelector("#rig");
     this.camera = document.querySelector("#camera");
-    this.right = document.querySelector("#controller-right");
-    this.left = document.querySelector("#controller-left");
 
+    this.controllers = { left: null, right: null };
     this.inVR = false;
+    this.raycaster = new THREE.Raycaster();
 
-    // Mostrar logs al entrar y salir de VR
+    // Entrar/salir de VR
     this.el.sceneEl.addEventListener("enter-vr", () => {
       this.inVR = true;
       console.log("🟢 Entrando en VR");
@@ -22,31 +23,40 @@ AFRAME.registerComponent("vr-locomotion", {
       console.log("🔴 Saliendo de VR");
     });
 
-    // Detectar controladores
+    // Detectar controladores conectados
     this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
-      console.log("🎮 Controlador conectado:", evt.detail.name);
-    });
-    this.el.sceneEl.addEventListener("controllerdisconnected", (evt) => {
-      console.log("❌ Controlador desconectado:", evt.detail.name);
+      const hand = evt.detail.hand || "unknown";
+      console.log(`🎮 Controlador conectado: ${hand}`);
+      if (hand === "left") this.controllers.left = evt.detail.target;
+      else if (hand === "right") this.controllers.right = evt.detail.target;
     });
 
-    // Raycaster para clicks con botón A
-    this.raycaster = new THREE.Raycaster();
+    // Detectar controladores desconectados
+    this.el.sceneEl.addEventListener("controllerdisconnected", (evt) => {
+      const hand = evt.detail.hand || "unknown";
+      console.log(`❌ Controlador desconectado: ${hand}`);
+      if (hand === "left") this.controllers.left = null;
+      else if (hand === "right") this.controllers.right = null;
+    });
   },
 
   tick: function () {
     if (!this.inVR) return;
 
-    // Recolectar gamepads de los controladores
-    const gpRight =
-      this.right?.components["laser-controls"]?.controller?.gamepad;
-    const gpLeft = this.left?.components["laser-controls"]?.controller?.gamepad;
+    // Función para mover el rig según joystick
+    const moveRig = (gp, hand) => {
+      if (!gp || !gp.axes) return;
 
-    // Mover rig según joystick derecho (si existe)
-    if (gpRight) {
-      const x = gpRight.axes[2] || 0; // horizontal
-      const y = gpRight.axes[3] || 0; // vertical
-      if (Math.abs(x) > 0.05 || Math.abs(y) > 0.05) {
+      // Detectar ejes dinámicamente
+      let joyX = 0,
+        joyY = 0;
+      if (gp.axes.length >= 2) {
+        joyX = gp.axes[0] || 0;
+        joyY = gp.axes[1] || 0;
+        if (this.data.invertY) joyY *= -1;
+      }
+
+      if (Math.abs(joyX) > 0.05 || Math.abs(joyY) > 0.05) {
         const dir = new THREE.Vector3();
         this.camera.object3D.getWorldDirection(dir);
         dir.y = 0;
@@ -56,45 +66,62 @@ AFRAME.registerComponent("vr-locomotion", {
         rightVec.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
 
         const move = new THREE.Vector3();
-        move.add(dir.multiplyScalar(-y * this.data.speed));
-        move.add(rightVec.multiplyScalar(x * this.data.speed));
+        move.add(dir.multiplyScalar(-joyY * this.data.speed));
+        move.add(rightVec.multiplyScalar(joyX * this.data.speed));
 
         this.rig.object3D.position.add(move);
       }
 
-      // Mostrar joystick en consola
-      console.log("🕹 Joystick Right:", x.toFixed(2), y.toFixed(2));
+      console.log(
+        `🕹 ${hand} joystick: X=${joyX.toFixed(2)}, Y=${joyY.toFixed(2)}`
+      );
 
-      // Botón A (índice 0 normalmente)
-      if (gpRight.buttons[0]?.pressed) {
+      // Botones
+      if (gp.buttons[0]?.pressed) {
         console.log("✅ Botón A pulsado");
-        this.simulateClick(this.right);
+        if (hand === "right") this.simulateClick(this.controllers.right);
       }
-      if (gpRight.buttons[1]?.pressed) console.log("✅ Botón B pulsado");
-      if (gpRight.buttons[2]?.pressed) console.log("✅ Botón X pulsado");
-      if (gpRight.buttons[3]?.pressed) console.log("✅ Botón Y pulsado");
+      if (gp.buttons[1]?.pressed) console.log("✅ Botón B pulsado");
+      if (gp.buttons[2]?.pressed) console.log("✅ Botón X pulsado");
+      if (gp.buttons[3]?.pressed) console.log("✅ Botón Y pulsado");
+    };
+
+    // Procesar joystick derecho
+    if (this.controllers.right) {
+      const gpRight =
+        this.controllers.right.components["laser-controls"]?.controller
+          ?.gamepad;
+      moveRig(gpRight, "right");
     }
 
-    // Podrías hacer lo mismo para el joystick izquierdo si quieres mover otra cosa
+    // Procesar joystick izquierdo (si quieres usarlo para otra cosa)
+    if (this.controllers.left) {
+      const gpLeft =
+        this.controllers.left.components["laser-controls"]?.controller?.gamepad;
+      moveRig(gpLeft, "left");
+    }
   },
 
   simulateClick: function (controllerEl) {
-    // Raycast hacia objetos interactables
+    if (!controllerEl) return;
+
     const origin = new THREE.Vector3();
-    const direction = new THREE.Vector3(0, 0, -1); // frente al controlador
+    const direction = new THREE.Vector3(0, 0, -1);
 
     controllerEl.object3D.getWorldPosition(origin);
     controllerEl.object3D.getWorldDirection(direction);
 
     this.raycaster.set(origin, direction);
-    const scene = this.el.sceneEl.object3D;
-    const intersects = this.raycaster.intersectObjects(scene.children, true);
+    const intersects = this.raycaster.intersectObjects(
+      this.el.sceneEl.object3D.children,
+      true
+    );
 
     for (let inter of intersects) {
       if (inter.object.el?.classList.contains("interactable")) {
         console.log("🎯 Click en malla:", inter.object.el.id);
         inter.object.el.emit("click");
-        break; // solo el primero
+        break;
       }
     }
   },
