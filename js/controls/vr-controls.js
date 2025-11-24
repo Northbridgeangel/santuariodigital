@@ -2,14 +2,15 @@
 AFRAME.registerComponent("test-joystick", {
   init: function () {
     console.log("🟢 Componente Test Joystick Quest inicializado");
-    this.gamepadsReady = false;
+    this.gamepadsReady = false;   // indica si ya se detectó sesión y gamepads
   },
 
   tick: function () {
-    // Verificar que la sesión WebXR esté activa
-    if (!this.el.sceneEl.xrSession) {
-      console.log("⚠️ Sesión WebXR no activa todavía");
-      return;
+    // Si la sesión aún no está activa, solo comprobamos una vez
+    if (!this.gamepadsReady) {
+      if (!this.el.sceneEl.xrSession) return; // no hacemos nada hasta que esté activa
+      console.log("🟢 Sesión WebXR activa");
+      this.gamepadsReady = true; // a partir de ahora ya comprobamos gamepads
     }
 
     // Obtener gamepads
