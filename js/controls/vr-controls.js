@@ -1,59 +1,28 @@
 //vr-controls.js
-AFRAME.registerComponent("test-joystick", {
-  schema: {
-    logThreshold: { type: "number", default: 0.01 },
-  },
-
+AFRAME.registerComponent("test-gamepad", {
   init: function () {
-    this.rightGamepad = null;
-    this.gamepadConnected = false;
-    console.log("🔹 Componente test-joystick inicializado");
-  },
+    console.log("Componente Test Gamepad inicializado");
 
-  tick: function () {
-    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-    this.rightGamepad = null;
+    // Entrar en VR
+    this.el.sceneEl.addEventListener("enter-vr", () => {
+      console.log("🟢 Entrando en VR");
 
-    for (let gp of gamepads) {
-      if (!gp) continue;
-      if (
-        gp.id.toLowerCase().includes("right") ||
-        gp.id.toLowerCase().includes("oculus touch")
-      ) {
-        this.rightGamepad = gp;
-        break;
+      // Revisar gamepads conectados
+      const gamepads = navigator.getGamepads();
+      for (let i = 0; i < gamepads.length; i++) {
+        const gp = gamepads[i];
+        if (gp) {
+          console.log(`🎮 Gamepad conectado #${i}:`, gp.id);
+        }
       }
-    }
 
-    // Detectar conexión/desconexión
-    if (this.rightGamepad && !this.gamepadConnected) {
-      this.gamepadConnected = true;
-      console.log("🎮 Gamepad derecho conectado:", this.rightGamepad.id);
-    } else if (!this.rightGamepad && this.gamepadConnected) {
-      this.gamepadConnected = false;
-      console.log("❌ Gamepad derecho desconectado");
-    }
+      if (!gamepads.length || !gamepads.some((gp) => gp)) {
+        console.log("⚠️ No hay gamepads detectados");
+      }
+    });
 
-    if (!this.rightGamepad) return;
-
-    // Detectar ejes adaptativos: 2/3 o 0/1
-    let x = 0,
-      y = 0;
-    if (this.rightGamepad.axes.length >= 4) {
-      x = this.rightGamepad.axes[2] || 0;
-      y = this.rightGamepad.axes[3] || 0;
-    } else if (this.rightGamepad.axes.length >= 2) {
-      x = this.rightGamepad.axes[0] || 0;
-      y = this.rightGamepad.axes[1] || 0;
-    }
-
-    console.log(`🕹 Joystick Right - X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}`);
-
-    if (
-      Math.abs(x) > this.data.logThreshold ||
-      Math.abs(y) > this.data.logThreshold
-    ) {
-      console.log("➡️ Movimiento detectado:", { x, y });
-    }
+    this.el.sceneEl.addEventListener("exit-vr", () => {
+      console.log("🔴 Saliendo de VR");
+    });
   },
 });
