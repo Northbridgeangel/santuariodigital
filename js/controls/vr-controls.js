@@ -1,66 +1,51 @@
 //vr-controls.js
 AFRAME.registerComponent("test-joystick", {
-  schema: {
-    logThreshold: { type: "number", default: 0.01 }, // valor mínimo para mostrar movimiento
-  },
-
   init: function () {
-    console.log("🎮 Componente Test Joystick Inicializando");
-    this.gamepads = { left: null, right: null };
+    console.log("🔹 Componente Test Joystick inicializado");
+
+    this.controllers = { left: null, right: null };
+    this.lastAxes = { left: [0, 0], right: [0, 0] };
+
+    // Controladores conectados
+    this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
+      const hand = evt.detail.hand || "unknown";
+      console.log(`🎮 Controlador conectado: ${hand}`);
+      if (hand === "left") this.controllers.left = evt.detail.target;
+      if (hand === "right") this.controllers.right = evt.detail.target;
+
+      // Empezar a escuchar joystick del gamepad de este controlador
+      this.listenGamepad(hand);
+    });
   },
 
-  tick: function () {
-    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+  listenGamepad: function (hand) {
+    const controller = this.controllers[hand];
+    if (!controller) return;
 
-    let leftFound = false;
-    let rightFound = false;
+    const checkGamepad = () => {
+      const gp = controller.components["laser-controls"]?.controller?.gamepad;
+      if (gp) {
+        // Chequear ejes (0,1 y 2,3)
+        const x = gp.axes[0] || gp.axes[2] || 0;
+        const y = gp.axes[1] || gp.axes[3] || 0;
 
-    for (let i = 0; i < gps.length; i++) {
-      const gp = gps[i];
-      if (!gp) continue;
+        if (x !== this.lastAxes[hand][0] || y !== this.lastAxes[hand][1]) {
+          console.log(
+            `🕹 ${hand} joystick X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
+          );
+          this.lastAxes[hand] = [x, y];
+        }
 
-      // Identificar el mando
-      const id = gp.id.toLowerCase();
-      let hand = "unknown";
-      if (id.includes("left")) hand = "left";
-      if (id.includes("right")) hand = "right";
-
-      if (hand === "left") {
-        this.gamepads.left = gp;
-        leftFound = true;
-      }
-      if (hand === "right") {
-        this.gamepads.right = gp;
-        rightFound = true;
-      }
-
-      // Leer axes (0/1 o 2/3 según dispositivo)
-      const x = gp.axes[2] !== undefined ? gp.axes[2] : gp.axes[0];
-      const y = gp.axes[3] !== undefined ? gp.axes[3] : gp.axes[1];
-
-      // Mostrar joystick aunque no se mueva
-      if (
-        Math.abs(x) > this.data.logThreshold ||
-        Math.abs(y) > this.data.logThreshold
-      ) {
-        console.log(
-          `🕹 [${hand}] Joystick X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
-        );
-      } else {
-        console.log(
-          `🕹 [${hand}] Joystick X=${x.toFixed(2)}, Y=${y.toFixed(
-            2
-          )} (sin movimiento)`
-        );
+        // Botones A,B,X,Y
+        if (gp.buttons[0]?.pressed) console.log(`✅ ${hand} Botón A`);
+        if (gp.buttons[1]?.pressed) console.log(`✅ ${hand} Botón B`);
+        if (gp.buttons[2]?.pressed) console.log(`✅ ${hand} Botón X`);
+        if (gp.buttons[3]?.pressed) console.log(`✅ ${hand} Botón Y`);
       }
 
-      // Botones
-      gp.buttons.forEach((b, idx) => {
-        if (b.pressed) console.log(`✅ [${hand}] Botón ${idx} pulsado`);
-      });
-    }
+      requestAnimationFrame(checkGamepad);
+    };
 
-    if (!leftFound) console.log("❌ Gamepad izquierdo no detectado");
-    if (!rightFound) console.log("❌ Gamepad derecho no detectado");
+    checkGamepad();
   },
 });
