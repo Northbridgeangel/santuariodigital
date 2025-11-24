@@ -1,9 +1,6 @@
 //vr-controls.js
 AFRAME.registerComponent("vr-locomotion", {
-  schema: {
-    speed: { type: "number", default: 0.05 },
-    invertY: { type: "boolean", default: true }, // para invertir eje vertical si es necesario
-  },
+  schema: { speed: { type: "number", default: 0.05 } },
 
   init: function () {
     this.rig = document.querySelector("#rig");
@@ -23,40 +20,38 @@ AFRAME.registerComponent("vr-locomotion", {
       console.log("🔴 Saliendo de VR");
     });
 
-    // Detectar controladores conectados
+    // Detectar controladores conectados por id
     this.el.sceneEl.addEventListener("controllerconnected", (evt) => {
-      const hand = evt.detail.hand || "unknown";
-      console.log(`🎮 Controlador conectado: ${hand}`);
-      if (hand === "left") this.controllers.left = evt.detail.target;
-      else if (hand === "right") this.controllers.right = evt.detail.target;
+      const id = evt.detail.target.id;
+      console.log(`🎮 Controlador conectado: ${id}`);
+      if (id === "controller-left") this.controllers.left = evt.detail.target;
+      if (id === "controller-right") this.controllers.right = evt.detail.target;
     });
 
     // Detectar controladores desconectados
     this.el.sceneEl.addEventListener("controllerdisconnected", (evt) => {
-      const hand = evt.detail.hand || "unknown";
-      console.log(`❌ Controlador desconectado: ${hand}`);
-      if (hand === "left") this.controllers.left = null;
-      else if (hand === "right") this.controllers.right = null;
+      const id = evt.detail.target.id;
+      console.log(`❌ Controlador desconectado: ${id}`);
+      if (id === "controller-left") this.controllers.left = null;
+      if (id === "controller-right") this.controllers.right = null;
     });
   },
 
   tick: function () {
     if (!this.inVR) return;
 
-    // Función para mover el rig según joystick
-    const moveRig = (gp, hand) => {
-      if (!gp || !gp.axes) return;
+    const moveRig = (controllerEl) => {
+      if (!controllerEl) return;
 
-      // Detectar ejes dinámicamente
-      let joyX = 0,
-        joyY = 0;
-      if (gp.axes.length >= 2) {
-        joyX = gp.axes[0] || 0;
-        joyY = gp.axes[1] || 0;
-        if (this.data.invertY) joyY *= -1;
-      }
+      // Comprobar que el gamepad exista
+      const gp = controllerEl.components["laser-controls"]?.controller?.gamepad;
+      if (!gp) return;
 
-      if (Math.abs(joyX) > 0.05 || Math.abs(joyY) > 0.05) {
+      // Detectar axes: si existen 2/3 los usamos, si no 0/1
+      const x = gp.axes[2] !== undefined ? gp.axes[2] : gp.axes[0] || 0;
+      const y = gp.axes[3] !== undefined ? gp.axes[3] : gp.axes[1] || 0;
+
+      if (Math.abs(x) > 0.05 || Math.abs(y) > 0.05) {
         const dir = new THREE.Vector3();
         this.camera.object3D.getWorldDirection(dir);
         dir.y = 0;
@@ -66,20 +61,20 @@ AFRAME.registerComponent("vr-locomotion", {
         rightVec.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
 
         const move = new THREE.Vector3();
-        move.add(dir.multiplyScalar(-joyY * this.data.speed));
-        move.add(rightVec.multiplyScalar(joyX * this.data.speed));
+        move.add(dir.multiplyScalar(-y * this.data.speed));
+        move.add(rightVec.multiplyScalar(x * this.data.speed));
 
         this.rig.object3D.position.add(move);
       }
 
       console.log(
-        `🕹 ${hand} joystick: X=${joyX.toFixed(2)}, Y=${joyY.toFixed(2)}`
+        `🕹 Joystick (${controllerEl.id}): X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
       );
 
-      // Botones
+      // Detectar botones A/B/X/Y
       if (gp.buttons[0]?.pressed) {
         console.log("✅ Botón A pulsado");
-        if (hand === "right") this.simulateClick(this.controllers.right);
+        this.simulateClick(controllerEl);
       }
       if (gp.buttons[1]?.pressed) console.log("✅ Botón B pulsado");
       if (gp.buttons[2]?.pressed) console.log("✅ Botón X pulsado");
@@ -87,19 +82,9 @@ AFRAME.registerComponent("vr-locomotion", {
     };
 
     // Procesar joystick derecho
-    if (this.controllers.right) {
-      const gpRight =
-        this.controllers.right.components["laser-controls"]?.controller
-          ?.gamepad;
-      moveRig(gpRight, "right");
-    }
-
-    // Procesar joystick izquierdo (si quieres usarlo para otra cosa)
-    if (this.controllers.left) {
-      const gpLeft =
-        this.controllers.left.components["laser-controls"]?.controller?.gamepad;
-      moveRig(gpLeft, "left");
-    }
+    moveRig(this.controllers.right);
+    // Si quieres, también joystick izquierdo:
+    // moveRig(this.controllers.left);
   },
 
   simulateClick: function (controllerEl) {
