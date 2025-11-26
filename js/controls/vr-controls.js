@@ -15,9 +15,14 @@ AFRAME.registerComponent("test-joystick", {
 
         // Escuchar cambios en los inputs (controladores)
         session.addEventListener("inputsourceschange", (evt) => {
+          // Controladores añadidos
           evt.added.forEach((input) => {
             if (input.gamepad) {
-              const id = input.gamepad.id;
+              const id =
+                input.handedness && input.handedness.length
+                  ? input.handedness
+                  : "unknown";
+
               if (!this.gamepads[id]) {
                 this.gamepads[id] = input.gamepad;
                 console.log(`🎮 Gamepad añadido: ${id}`);
@@ -25,9 +30,14 @@ AFRAME.registerComponent("test-joystick", {
             }
           });
 
+          // Controladores eliminados
           evt.removed.forEach((input) => {
             if (input.gamepad) {
-              const id = input.gamepad.id;
+              const id =
+                input.handedness && input.handedness.length
+                  ? input.handedness
+                  : "unknown";
+
               if (this.gamepads[id]) {
                 console.log(`❌ Gamepad eliminado: ${id}`);
                 delete this.gamepads[id];
@@ -55,7 +65,9 @@ AFRAME.registerComponent("test-joystick", {
       // Solo loguear si ya no lo hemos hecho
       if (!gp.logged) {
         console.log(
-          `🎮 Gamepad detectado en tick: ${gp.id}, index: ${gp.index}`
+          `🎮 Gamepad detectado en tick: ${gp.id || "sin-id"}, index: ${
+            gp.index
+          }`
         );
         gp.logged = true;
       }
