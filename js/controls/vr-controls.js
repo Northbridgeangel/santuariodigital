@@ -1,89 +1,87 @@
 // vr-controls.js
 AFRAME.registerComponent("test-joystick", {
+  schema: {
+    pads: { default: {} }, // left, right, unknown
+  },
+
   init: function () {
     console.log("🟢 Componente Test Joystick Quest inicializado");
 
-    this.gamepads = {}; // para no loguear lo mismo varias veces
     this.xrSessionActive = false;
 
-    // Detectar cuando la sesión XR entra
-    this.el.sceneEl.addEventListener("enter-vr", async () => {
+    this.el.sceneEl.addEventListener("enter-vr", () => {
       const session = this.el.sceneEl.xrSession;
-      if (session) {
-        this.xrSessionActive = true;
-        console.log("🟢 Session WebXR activa");
+      if (!session) return;
 
-        // Escuchar cambios en los inputs (controladores)
-        session.addEventListener("inputsourceschange", (evt) => {
-          // Controladores añadidos
-          evt.added.forEach((input) => {
-            if (input.gamepad) {
-              const id =
-                input.handedness && input.handedness.length
-                  ? input.handedness
-                  : "unknown";
+      this.xrSessionActive = true;
+      console.log("🟢 Session WebXR activa");
 
-              if (!this.gamepads[id]) {
-                this.gamepads[id] = input.gamepad;
-                console.log(`🎮 Gamepad añadido: ${id}`);
-              }
-            }
-          });
+      session.addEventListener("inputsourceschange", (evt) => {
+        // ➕ AÑADIDOS
+        evt.added.forEach((source) => {
+          if (!source.gamepad) return;
 
-          // Controladores eliminados
-          evt.removed.forEach((input) => {
-            if (input.gamepad) {
-              const id =
-                input.handedness && input.handedness.length
-                  ? input.handedness
-                  : "unknown";
+          const hand = source.handedness || "unknown";
 
-              if (this.gamepads[id]) {
-                console.log(`❌ Gamepad eliminado: ${id}`);
-                delete this.gamepads[id];
-              }
-            }
-          });
+          // Creamos la estructura SOLO UNA VEZ
+          this.data.pads[hand] = {
+            source: source,
+            axes: source.gamepad.axes,
+            buttons: source.gamepad.buttons,
+          };
+
+          console.log(`🎮 Gamepad añadido: ${hand}`);
         });
-      }
+
+        // ➖ ELIMINADOS
+        evt.removed.forEach((source) => {
+          if (!source.gamepad) return;
+
+          const hand = source.handedness || "unknown";
+
+          if (this.data.pads[hand]) {
+            console.log(`❌ Gamepad eliminado: ${hand}`);
+            delete this.data.pads[hand];
+          }
+        });
+      });
     });
 
     this.el.sceneEl.addEventListener("exit-vr", () => {
       this.xrSessionActive = false;
+      this.data.pads = {};
       console.log("🔴 Saliendo de VR");
-      this.gamepads = {};
     });
   },
 
   tick: function () {
     if (!this.xrSessionActive) return;
 
-    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (let gp of gps) {
-      if (!gp) continue;
+    const pads = this.data.pads;
 
-      // Solo loguear si ya no lo hemos hecho
-      if (!gp.logged) {
-        console.log(
-          `🎮 Gamepad detectado en tick: ${gp.id || "sin-id"}, index: ${
-            gp.index
-          }`
-        );
-        gp.logged = true;
-      }
+    // Leemos SIN RECREAR NADA
+    for (const hand in pads) {
+      const pad = pads[hand];
+      const gp = pad.source.gamepad;
 
-      // Joystick X/Y
-      const x = gp.axes[0] || gp.axes[2] || 0;
-      const y = gp.axes[1] || gp.axes[3] || 0;
-
-      if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
-        console.log(`🕹 Joystick: X=${x.toFixed(2)}, Y=${y.toFixed(2)}`);
-      }
-
-      // Botones 0-3
-      gp.buttons.forEach((b, i) => {
-        if (b.pressed) console.log(`✅ Botón ${i} pulsado`);
+      // 🔘 Botones
+      gp.buttons.forEach((btn, i) => {
+        if (btn.pressed) {
+          console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
+        }
       });
+
+      // 🕹 Joystick
+      if (gp.axes.length >= 2) {
+        const x = gp.axes[0] || gp.axes[2] || 0;
+        const y = gp.axes[1] || gp.axes[3] || 0;
+
+        if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
+          console.log(
+            `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
+          );
+        }
+      }
     }
   },
 });
