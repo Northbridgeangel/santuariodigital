@@ -59,7 +59,7 @@ AFRAME.registerComponent("test-joystick", {
     });
   },
 
-  tick: function (deltaTime) {
+  tick: function (time, deltaTime) {
     if (!this.xrSessionActive) return;
     const pads = this.data.pads;
 
@@ -94,8 +94,6 @@ AFRAME.registerComponent("test-joystick", {
           btnstate.pressed = false;
         }
       });
-
-
 
       // 🕹 Joystick
       if (gp.axes.length >= 2) {
