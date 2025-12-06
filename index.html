@@ -38,7 +38,7 @@
             },
 
             init: function () {
-                const rig = document.querySelector("#rig");
+                const rig = this.el; // ← ESTA ES LA CLAVE, ya se llama en el rig directamente
                 if (!rig) return;
 
                 this.el.sceneEl.addEventListener("enter-vr", () => {
@@ -137,20 +137,16 @@
             </a-entity>
         
             <!-- CONTROLADOR IZQUIERDO -->
-            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left"
+            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left" hand-tracking-controls="hand: left"
                 raycaster="objects: .interactable; far: 30">
-        
-                <!-- Cursor visible -->
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
                 </a-entity>
             </a-entity>
-        
+            
             <!-- CONTROLADOR DERECHO -->
-            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right"
+            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right" hand-tracking-controls="hand: right"
                 raycaster="objects: .interactable; far: 30">
-        
-                <!-- Cursor visible -->
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat">
                 </a-entity>

@@ -1,4 +1,4 @@
-// vr-controls.js
+// vr-controls.js -> sistema PAD / controlador mixto
 AFRAME.registerComponent("test-joystick", {
   schema: {
     pads: { default: {} }, // left, right, unknown
@@ -17,30 +17,44 @@ AFRAME.registerComponent("test-joystick", {
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
-        // ➕ AÑADIDOS
+        
+        /* ────────────────────────────────────────────────
+         *   AÑADIDOS
+         * ──────────────────────────────────────────────── */
         evt.added.forEach((source) => {
-          if (!source.gamepad) return;
-
           const hand = source.handedness || "unknown";
 
-          // Creamos la estructura SOLO UNA VEZ
-          this.data.pads[hand] = {
-            source: source,
-            axes: source.gamepad.axes,
-            buttons: source.gamepad.buttons,
-          };
+          /* 🎮 CONTROLLER (gamepad) */
+          if (source.gamepad) {
+            this.data.pads[hand] = {
+              type: "controller",
+              source: source,
+              axes: source.gamepad.axes,
+              buttons: source.gamepad.buttons,
+            };
+            console.log(`🎮 Gamepad añadido: ${hand}`);
+          }
 
-          console.log(`🎮 Gamepad añadido: ${hand}`);
+          /* 🖐 HAND TRACKING (manos reales) */
+          if (source.hand) {
+            this.data.pads[hand] = {
+              type: "hand",
+              source: source,
+              hand: source.hand,
+            };
+
+            console.log(`🖐 HAND añadido: ${hand} (tracking hand)`);
+          }
         });
 
-        // ➖ ELIMINADOS
+        /* ────────────────────────────────────────────────
+         *   ELIMINADOS
+         * ──────────────────────────────────────────────── */
         evt.removed.forEach((source) => {
-          if (!source.gamepad) return;
-
           const hand = source.handedness || "unknown";
 
           if (this.data.pads[hand]) {
-            console.log(`❌ Gamepad eliminado: ${hand}`);
+            console.log(`❌ InputSource eliminado (${this.data.pads[hand].type}): ${hand}`);
             delete this.data.pads[hand];
           }
         });
@@ -59,27 +73,46 @@ AFRAME.registerComponent("test-joystick", {
 
     const pads = this.data.pads;
 
-    // Leemos SIN RECREAR NADA
     for (const hand in pads) {
       const pad = pads[hand];
-      const gp = pad.source.gamepad;
 
-      // 🔘 Botones
-      gp.buttons.forEach((btn, i) => {
-        if (btn.pressed) {
-          console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
+      /* ────────────────────────────────────────────────
+       *    1. CONTROLLER (gamepad)
+       * ──────────────────────────────────────────────── */
+      if (pad.type === "controller") {
+        const gp = pad.source.gamepad;
+
+        // Botones
+        gp.buttons.forEach((btn, i) => {
+          if (btn.pressed) {
+            console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
+          }
+        });
+
+        // Joystick
+        if (gp.axes.length >= 2) {
+          const x = gp.axes[0] || gp.axes[2] || 0;
+          const y = gp.axes[1] || gp.axes[3] || 0;
+
+          if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
+            console.log(
+              `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
+            );
+          }
         }
-      });
+      }
 
-      // 🕹 Joystick
-      if (gp.axes.length >= 2) {
-        const x = gp.axes[0] || gp.axes[2] || 0;
-        const y = gp.axes[1] || gp.axes[3] || 0;
+      /* ────────────────────────────────────────────────
+       *    2. HAND TRACKING (joints)
+       * ──────────────────────────────────────────────── */
+      if (pad.type === "hand") {
+        const handObj = pad.hand;
 
-        if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
-          console.log(
-            `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
-          );
+        // Ejemplo: detectar si el índice está visible
+        const indexTip = handObj.get?.("index-finger-tip");
+
+        if (indexTip) {
+          console.log(`👉 Mano ${hand}: índice tracking OK`);
         }
       }
     }
