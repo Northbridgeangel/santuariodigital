@@ -81,22 +81,40 @@ AFRAME.registerComponent("test-joystick", {
             `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
           );
 
-          // Movimiento simple hacia adelante/atrás usando el eje Y
+          // Obtener el rig de la escena
+          const rig = document.querySelector("#rig"); // Cambia el selector según tu escena
           if (rig) {
-            rig.object3D.position.z += y * 0.01; // adelante/atrás
-            rig.object3D.position.x += x * 0.01; // izquierda/derecha
-            // // Log de la posición del rig
-            console.log(
-              `🚶‍♂️ Rig posición: X=${rig.object3D.position.x.toFixed(
-                2
-              )}, Y=${rig.object3D.position.y.toFixed(
-                2
-              )}, Z=${rig.object3D.position.z.toFixed(2)}`
-            );
+            // Obtener la cámara dentro del rig
+            const cam =
+              rig.querySelector("[camera]") || rig.querySelector("a-camera");
+            if (cam) {
+              // Crear vector de movimiento basado en joystick
+              const moveVector = new THREE.Vector3(x, 0, -y); // -y porque adelante es negativo
+
+              // Obtener dirección de la cámara
+              const camDir = cam.object3D.getWorldDirection(
+                new THREE.Vector3()
+              );
+              const angle = Math.atan2(camDir.x, camDir.z); // ángulo Y de la cámara
+
+              // Rotar vector de movimiento según ángulo de la cámara
+              moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+
+              // Aplicar movimiento al rig
+              rig.object3D.position.add(moveVector.multiplyScalar(0.015)); // ajustar velocidad
+
+              // Log de la posición del rig
+              console.log(
+                `🚶‍♂️ Rig posición: X=${rig.object3D.position.x.toFixed(
+                  2
+                )}, Y=${rig.object3D.position.y.toFixed(
+                  2
+                )}, Z=${rig.object3D.position.z.toFixed(2)}`
+              );
+            }
           }
         }
       }
     }
   },
 });
-   
