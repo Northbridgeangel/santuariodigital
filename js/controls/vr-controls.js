@@ -1,10 +1,10 @@
 // vr-controls.js -> sistema PAD
-AFRAME.registerComponent("test-joystick", {
+AFRAME.registerComponent("vr-controls", {
   schema: {
     pads: { default: {} },
     PressThreshold: { default: 500 }, // ms
     //USO VRBUTTONS GLOBAL, ejemplo: const leftButtons = sceneEl.VRButtonState.left;
-    //if (leftButtons[1].KeepPressed) { /* lógica */ }
+    //if (leftButtons[1].VRHold) { /* lógica */ }
   },
 
   init: function () {
@@ -36,8 +36,8 @@ AFRAME.registerComponent("test-joystick", {
             buttons: source.gamepad.buttons,
             buttonState: source.gamepad.buttons.map(() => ({
               PressTime: 0,
-              KeepPressed: false,
-              SimpleClick: false,
+              VRHold: false,
+              VRClick: false,
             })),
           };
 
@@ -74,35 +74,48 @@ AFRAME.registerComponent("test-joystick", {
   tick: function (time, deltaTime) {
     if (!this.xrSessionActive) return;
     const pads = this.data.pads;
+    const scene = this.el.sceneEl;
 
     for (const hand in pads) {
       const pad = pads[hand];
       const gp = pad.source.gamepad;
 
-      // 1️⃣ 🔘 Botones - KeepPressed / SimpleClick
+      // 1️⃣ 🔘 Botones - VRHold / VRClick
       gp.buttons.forEach((btn, i) => {
         const btnState = pad.buttonState[i];
 
         if (btn.pressed) {
           btnState.PressTime += deltaTime; // deltaTime en ms
-          btnState.KeepPressed = btnState.PressTime >= this.data.PressThreshold;
-          btnState.SimpleClick = false;
+          btnState.VRHold = btnState.PressTime >= this.data.PressThreshold;
+          btnState.VRClick = false;
         } else {
-          btnState.SimpleClick =
+          btnState.VRClick =
             btnState.PressTime > 0 &&
             btnState.PressTime < this.data.PressThreshold;
-          btnState.KeepPressed = false;
+          btnState.VRHold = false;
           btnState.PressTime = 0;
         }
 
         // 🔔 Console log del tipo de toque
-        if (btnState.KeepPressed || btnState.SimpleClick) {
-          const tipo = btnState.KeepPressed ? "KeepPressed" : "SimpleClick";
+        if (btnState.VRHold || btnState.VRClick) {
+          const tipo = btnState.VRHold ? "VRHold" : "VRClick";
           console.log(`Tipo de toque: ${tipo} | Botón ${i} | Mano: ${hand}`);
         }
       });
 
-      // 2️⃣ 🕹 Joystick
+      // 2️⃣ 🔘 Acción específica: botón A (4) mano derecha
+      if (hand === "right") {
+        const rightButtons = scene.VRButtonState["right"];
+        if (rightButtons[4].VRClick) {
+          // Mesh bajo el puntero o seleccionado por tu lógica de raycaster
+          const mesh = scene.selectedMeshUnderPointer; // sustituye con tu lógica real
+          if (mesh) {
+            handleClick(mesh);
+          }
+        }
+      }
+
+      // 3️⃣ 🕹 Joystick
       if (gp.axes.length >= 2) {
         const x = gp.axes[0] || gp.axes[2] || 0; // izquierda/derecha
         const y = gp.axes[1] || gp.axes[3] || 0; // adelante/atrás

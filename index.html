@@ -27,7 +27,7 @@
     <script src="./js/components/mirrormaterial.js"></script>
     <script src="./js/components/DetectorClickHover.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
-    <script src="./js/components/autoRaycastTag.js"></script>
+    <script src="./js/components/auto-raycast.js"></script>
     <script src="./js/debug-overlay.js"></script>
 
     <script>
@@ -119,7 +119,7 @@
     <!--  EL PROYECTO  -->
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
-        cursor="rayOrigin: mouse" fly-mode test-joystick>
+        cursor="rayOrigin: mouse" fly-mode vr-controls>
         <!-- Fondo -->
         <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
@@ -133,7 +133,7 @@
         
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down swipe-left-right
-                clickable position="0 0.25 0">
+                clickable position="0 0.25 0" auto-raycaster>
             </a-entity>
         
             <!-- CONTROLADOR IZQUIERDO -->
@@ -157,10 +157,10 @@
 
         <!-- GLB cargado como escenario estático -->
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door
-            class="interactable"></a-entity>
+            class="interactable" auto-raycast-tag></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
-        <a-entity id="hud-wings" position="0.44 0.98 3.015" auto-raycast-tag>
+        <a-entity id="hud-wings" position="0.44 0.98 3.015">
             <a-entity id="hud-wings-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
                 material="color: white; side: double; transparent: true; opacity: 0.5" rotation="0 180 0"
