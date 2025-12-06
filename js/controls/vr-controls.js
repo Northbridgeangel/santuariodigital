@@ -117,17 +117,13 @@ AFRAME.registerComponent("test-joystick", {
 
           // 🟩 Flight Mode → adelante/atrás se convierte en subir/bajar con acumulación
           if (isFlying) {
-            /// Sumar movimiento vertical al acumulador
-            this.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
-
-            // Aplicar posición acumulada
-            rig.object3D.position.y = this.verticalPos;
+            if (Math.abs(y) > 0.01) {
+              this.verticalPos += -y * Speed;/// Sumar movimiento vertical al acumulador
+              rig.object3D.position.y = this.verticalPos;// Aplicar posición acumulada
+            }
           }
           // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
           else {
-            // Flight Mode desactivado → mantener altura actual
-            this.verticalPos = rig.object3D.position.y;
-            
             if (Math.abs(y) > 0.01) {
               const forward = new THREE.Vector3(0, 0, y);
               forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
