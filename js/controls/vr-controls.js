@@ -1,8 +1,10 @@
 // vr-controls.js -> sistema PAD
 AFRAME.registerComponent("test-joystick", {
   schema: {
-    pads: { default: {} }, // left, right, unknown
-    Holding: 500, // 0.5 segundos = 500 ms
+    pads: { default: {} },
+    PressThreshold: { default: 500 }, // ms
+    //USO VRBUTTONS GLOBAL, ejemplo: const leftButtons = sceneEl.VRButtonState.left;
+    //if (leftButtons[1].KeepPressed) { /* lógica */ }
   },
 
   init: function () {
@@ -30,11 +32,16 @@ AFRAME.registerComponent("test-joystick", {
             axes: source.gamepad.axes,
             buttons: source.gamepad.buttons,
             buttonState: source.gamepad.buttons.map(() => ({
-              pressed: false,
-              accumulatedTime: 0,
+              PressTime: 0,
+              KeepPressed: false,
+              SimpleClick: false,
             })),
           };
 
+          // Estado global accesible desde cualquier script
+          this.el.sceneEl.VRButtonState[hand] =
+            this.data.pads[hand].buttonState;
+          
           console.log(`🎮 Gamepad añadido: ${hand}`);
         });
 
@@ -47,6 +54,7 @@ AFRAME.registerComponent("test-joystick", {
           if (this.data.pads[hand]) {
             console.log(`❌ Gamepad eliminado: ${hand}`);
             delete this.data.pads[hand];
+            delete this.el.sceneEl.VRButtonState[hand];
           }
         });
       });
@@ -55,6 +63,7 @@ AFRAME.registerComponent("test-joystick", {
     this.el.sceneEl.addEventListener("exit-vr", () => {
       this.xrSessionActive = false;
       this.data.pads = {};
+      this.el.sceneEl.VRButtonState = {};
       console.log("🔴 Saliendo de VR");
     });
   },
@@ -63,39 +72,41 @@ AFRAME.registerComponent("test-joystick", {
     if (!this.xrSessionActive) return;
     const pads = this.data.pads;
 
-    // Leemos SIN RECREAR NADA
     for (const hand in pads) {
       const pad = pads[hand];
       const gp = pad.source.gamepad;
 
-      // 🔘 Botones
+      // 1️⃣ 🔘 Botones - KeepPressed / SimpleClick para todos los botones
       gp.buttons.forEach((btn, i) => {
-        const btnstate = pad.buttonState[i];
+        const btnState = pad.buttonState[i];
 
         if (btn.pressed) {
-          btnstate.accumulatedTime += deltaTime;
-
-          if (
-            !btnstate.pressed &&
-            btnstate.accumulatedTime >= this.data.Holding
-          ) {
-            console.log(`🔒 Keep Pressed ${hand} #${i}`);
-            btnstate.pressed = true;
-          }
+          btnState.PressTime += deltaTime;
+          btnState.KeepPressed = btnState.PressTime >= this.data.PressThreshold;
+          btnState.SimpleClick = false;
         } else {
-          if (
-            btnstate.accumulatedTime > 0 &&
-            btnstate.accumulatedTime < this.data.Holding
-          ) {
-            console.log(`🎯 Click ${hand} #${i}`);
-          }
-          // Reset estado
-          btnstate.accumulatedTime = 0;
-          btnstate.pressed = false;
+          btnState.SimpleClick =
+            btnState.PressTime > 0 &&
+            btnState.PressTime < this.data.PressThreshold;
+          btnState.KeepPressed = false;
+          btnState.PressTime = 0;
+        }
+
+
+        // Actualizamos el estado global en sceneEl
+        this.el.sceneEl.VRButtonState[hand] =
+          this.el.sceneEl.VRButtonState[hand] || []; // <--- Crea el array vacío si no existe
+        
+        this.el.sceneEl.VRButtonState[hand][i] = btnState; //<--- Actualiza el estado
+
+
+        // 🔔 Console log del tipo de toque en un solo log
+        if (btnState.KeepPressed || btnState.SimpleClick) {
+          const tipo = btnState.KeepPressed ? "KeepPressed" : "SimpleClick";
+          console.log(`Tipo de toque: ${tipo} | Botón ${i}`);
         }
       });
-
-      // 🕹 Joystick
+      // 2️⃣ 🕹 Joystick
       if (gp.axes.length >= 2) {
         const x = gp.axes[0] || gp.axes[2] || 0; // izquierda/derecha
         const y = gp.axes[1] || gp.axes[3] || 0; // adelante/atrás
