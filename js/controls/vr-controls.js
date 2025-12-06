@@ -135,23 +135,16 @@ AFRAME.registerComponent("test-joystick", {
         // 🎮 JOYSTICK DERECHO
         // ---------------------------------------------------
         if (hand === "right") {
-          const rotSensitivity = 0.01; // sensibilidad máxima para rotación
-          const moveSensitivity = Speed; // sensibilidad para movimiento hacia adelante/atrás
-
-          // 🟥 Rotación del rig (yaw) con prioridad al movimiento adelante/atrás
+          // 🟥 Rotación del rig (yaw)
           if (Math.abs(x) > 0.01) {
-            // Reducir rotación si el joystick está empujado hacia adelante/atrás
-            const yFactor = 1 - Math.min(Math.abs(y) / 0.8, 1);
-            // yFactor = 1 cuando y ~ 0 → rotación plena
-            // yFactor = 0 cuando y ~ ±0.8 → rotación casi nula
-            rig.object3D.rotation.y -= x * rotSensitivity * yFactor;
+            rig.object3D.rotation.y -= x * Speed; 
           }
 
           // 🟥 Movimiento hacia adelante/atrás relativo al YAW
           if (Math.abs(y) > 0.01) {
             const forward = new THREE.Vector3(0, 0, y);
             forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-            rig.object3D.position.add(forward.multiplyScalar(moveSensitivity));
+            rig.object3D.position.add(forward.multiplyScalar(Speed));
           }
         }
       }
