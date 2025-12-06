@@ -125,6 +125,9 @@ AFRAME.registerComponent("test-joystick", {
           }
           // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
           else {
+            // Flight Mode desactivado → mantener altura actual
+            this.verticalPos = rig.object3D.position.y;
+            
             if (Math.abs(y) > 0.01) {
               const forward = new THREE.Vector3(0, 0, y);
               forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
