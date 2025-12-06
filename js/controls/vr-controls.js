@@ -17,22 +17,20 @@ AFRAME.registerComponent("test-joystick", {
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
-        // Añadidos
+        // ➕ Añadidos
         evt.added.forEach((source) => {
           const hand = source.handedness || "unknown";
 
-          // 🎮 Controller
+          // 🎮 CONTROLLER
           if (source.gamepad) {
             this.data.pads[hand] = {
               type: "controller",
               source: source,
-              axes: source.gamepad.axes,
-              buttons: source.gamepad.buttons,
             };
             console.log(`🎮 Gamepad añadido: ${hand}`);
           }
 
-          // 🖐 Hand tracking
+          // 🖐 HAND TRACKING
           if (source.hand) {
             this.data.pads[hand] = {
               type: "hand",
@@ -43,7 +41,7 @@ AFRAME.registerComponent("test-joystick", {
           }
         });
 
-        // Eliminados
+        // ➖ Eliminados
         evt.removed.forEach((source) => {
           const hand = source.handedness || "unknown";
           if (this.data.pads[hand]) {
@@ -75,22 +73,19 @@ AFRAME.registerComponent("test-joystick", {
     for (const hand in pads) {
       const pad = pads[hand];
 
-      // 1️⃣ Botones y joystick siempre que sea controller
-      if (pad.type === "controller") {
+      // ─── 1️⃣ CONTROLLER: leer botones y joystick en cada frame ───
+      if (pad.type === "controller" && pad.source.gamepad) {
         const gp = pad.source.gamepad;
 
-        // Botones
         gp.buttons.forEach((btn, i) => {
           if (btn.pressed) {
             console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
           }
         });
 
-        // Joystick
         if (gp.axes.length >= 2) {
           const x = gp.axes[0] || gp.axes[2] || 0;
           const y = gp.axes[1] || gp.axes[3] || 0;
-
           if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
             console.log(
               `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
@@ -99,19 +94,22 @@ AFRAME.registerComponent("test-joystick", {
         }
       }
 
-      // 2️⃣ Hand tracking y grip distance
+      // ─── 2️⃣ HAND TRACKING y GRIP DISTANCE ───
       let handPose = null;
-      if (pad.type === "hand") {
+      let gripPose = null;
+
+      // Hand tracking
+      if (pad.type === "hand" && pad.hand) {
         const indexTip = pad.hand.get?.("index-finger-tip");
         if (indexTip) handPose = indexTip;
       }
 
-      let gripPose = null;
+      // Controller grip
       if (pad.type === "controller" && pad.source.gripSpace) {
         gripPose = frame.getPose(pad.source.gripSpace, xrRefSpace);
       }
 
-      // Comparación distancia Z
+      // Distancia Z (profundidad)
       if (handPose && gripPose) {
         const distanceZ = Math.abs(
           gripPose.transform.position.z - handPose.transform.position.z
