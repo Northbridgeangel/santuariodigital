@@ -17,7 +17,6 @@ AFRAME.registerComponent("test-joystick", {
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
-        
         /* ────────────────────────────────────────────────
          *   AÑADIDOS
          * ──────────────────────────────────────────────── */
@@ -31,6 +30,7 @@ AFRAME.registerComponent("test-joystick", {
               source: source,
               axes: source.gamepad.axes,
               buttons: source.gamepad.buttons,
+              isGripped: false, // ← estado del grip sensor
             };
             console.log(`🎮 Gamepad añadido: ${hand}`);
           }
@@ -54,7 +54,9 @@ AFRAME.registerComponent("test-joystick", {
           const hand = source.handedness || "unknown";
 
           if (this.data.pads[hand]) {
-            console.log(`❌ InputSource eliminado (${this.data.pads[hand].type}): ${hand}`);
+            console.log(
+              `❌ InputSource eliminado (${this.data.pads[hand].type}): ${hand}`
+            );
             delete this.data.pads[hand];
           }
         });
@@ -82,14 +84,24 @@ AFRAME.registerComponent("test-joystick", {
       if (pad.type === "controller") {
         const gp = pad.source.gamepad;
 
-        // Botones
+        // 🔥 SENSOR DE GRIP REAL (analógico)
+        const gripValue = gp.buttons[1]?.value ?? 0;
+        pad.isGripped = gripValue > 0.15;
+
+        // 🧠 Si NO lo estás agarrando → ignoramos el mando
+        if (!pad.isGripped) {
+          //console.log(`(🟡 ${hand}) mando suelto → ignorado`);
+          continue;
+        }
+
+        // 🔘 Botones
         gp.buttons.forEach((btn, i) => {
           if (btn.pressed) {
             console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
           }
         });
 
-        // Joystick
+        // 🕹 Joystick
         if (gp.axes.length >= 2) {
           const x = gp.axes[0] || gp.axes[2] || 0;
           const y = gp.axes[1] || gp.axes[3] || 0;
