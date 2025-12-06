@@ -73,9 +73,8 @@ AFRAME.registerComponent("test-joystick", {
 
       // 🕹 Joystick
       if (gp.axes.length >= 2) {
-        //?? = solo salta si el valor es null o undefined, no si es 0
-        const x = gp.axes[0] ?? gp.axes[2] ?? 0;
-        const y = gp.axes[1] ?? gp.axes[3] ?? 0;
+        const x = gp.axes[0] || gp.axes[2] || 0;
+        const y = gp.axes[1] || gp.axes[3] || 0;
 
         const Speed = 0.02;
 
