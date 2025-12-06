@@ -12,6 +12,9 @@ AFRAME.registerComponent("test-joystick", {
 
     this.xrSessionActive = false;
 
+    // 🔹 Inicializamos estado global de botones
+    this.el.sceneEl.VRButtonState = {};
+
     this.el.sceneEl.addEventListener("enter-vr", () => {
       const session = this.el.sceneEl.xrSession;
       if (!session) return;
@@ -20,7 +23,7 @@ AFRAME.registerComponent("test-joystick", {
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
-        // ➕ AÑADIDOS
+        // ➕ Gamepads añadidos
         evt.added.forEach((source) => {
           if (!source.gamepad) return;
 
@@ -38,14 +41,14 @@ AFRAME.registerComponent("test-joystick", {
             })),
           };
 
-          // Estado global accesible desde cualquier script
+          // Estado global apunta al mismo array
           this.el.sceneEl.VRButtonState[hand] =
             this.data.pads[hand].buttonState;
-          
+
           console.log(`🎮 Gamepad añadido: ${hand}`);
         });
 
-        // ➖ ELIMINADOS
+        // ➖ Gamepads eliminados
         evt.removed.forEach((source) => {
           if (!source.gamepad) return;
 
@@ -76,12 +79,12 @@ AFRAME.registerComponent("test-joystick", {
       const pad = pads[hand];
       const gp = pad.source.gamepad;
 
-      // 1️⃣ 🔘 Botones - KeepPressed / SimpleClick para todos los botones
+      // 1️⃣ 🔘 Botones - KeepPressed / SimpleClick
       gp.buttons.forEach((btn, i) => {
         const btnState = pad.buttonState[i];
 
         if (btn.pressed) {
-          btnState.PressTime += deltaTime;
+          btnState.PressTime += deltaTime; // deltaTime en ms
           btnState.KeepPressed = btnState.PressTime >= this.data.PressThreshold;
           btnState.SimpleClick = false;
         } else {
@@ -92,20 +95,13 @@ AFRAME.registerComponent("test-joystick", {
           btnState.PressTime = 0;
         }
 
-
-        // Actualizamos el estado global en sceneEl
-        this.el.sceneEl.VRButtonState[hand] =
-          this.el.sceneEl.VRButtonState[hand] || []; // <--- Crea el array vacío si no existe
-        
-        this.el.sceneEl.VRButtonState[hand][i] = btnState; //<--- Actualiza el estado
-
-
-        // 🔔 Console log del tipo de toque en un solo log
+        // 🔔 Console log del tipo de toque
         if (btnState.KeepPressed || btnState.SimpleClick) {
           const tipo = btnState.KeepPressed ? "KeepPressed" : "SimpleClick";
-          console.log(`Tipo de toque: ${tipo} | Botón ${i}`);
+          console.log(`Tipo de toque: ${tipo} | Botón ${i} | Mano: ${hand}`);
         }
       });
+
       // 2️⃣ 🕹 Joystick
       if (gp.axes.length >= 2) {
         const x = gp.axes[0] || gp.axes[2] || 0; // izquierda/derecha
