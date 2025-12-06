@@ -99,3 +99,4 @@ AFRAME.registerComponent("test-joystick", {
     }
   },
 });
+   
