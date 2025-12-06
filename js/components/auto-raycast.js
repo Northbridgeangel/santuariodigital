@@ -14,15 +14,12 @@ AFRAME.registerComponent("auto-raycast-tag", {
 
       mesh.traverse((node) => {
         if (node.isMesh) {
-          node.el = this.el; // referencia al entity original
-          node.classList = this.el.classList;
-          node.classList.add("interactable");
+          // Marcamos correctamente la malla
+          node.userData.interactable = true;
         }
       });
 
-      console.log(
-        "🎯 auto-raycast-tag: mallas internas marcadas como .interactable"
-      );
+      console.log("🎯 Todas las mallas internas marcadas como interactables");
     });
   },
 });
@@ -56,11 +53,7 @@ AFRAME.registerComponent("auto-raycaster", {
     // Obtenemos todos los meshes interactuables
     const interactables = [];
     this.scene.object3D.traverse((node) => {
-      if (
-        node.isMesh &&
-        node.classList &&
-        node.classList.contains("interactable")
-      ) {
+      if (node.isMesh && node.userData.interactable === true) {
         interactables.push(node);
       }
     });
