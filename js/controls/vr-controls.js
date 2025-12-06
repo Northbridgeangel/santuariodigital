@@ -2,6 +2,7 @@
 AFRAME.registerComponent("test-joystick", {
   schema: {
     pads: { default: {} }, // left, right, unknown
+    Holding: 500, // 0.5 segundos = 500 ms
   },
 
   init: function () {
@@ -28,6 +29,10 @@ AFRAME.registerComponent("test-joystick", {
             source: source,
             axes: source.gamepad.axes,
             buttons: source.gamepad.buttons,
+            buttonState: source.gamepad.buttons.map(() => ({
+              pressed: false,
+              accumulatedTime: 0,
+            })),
           };
 
           console.log(`🎮 Gamepad añadido: ${hand}`);
@@ -54,9 +59,8 @@ AFRAME.registerComponent("test-joystick", {
     });
   },
 
-  tick: function () {
+  tick: function (deltaTime) {
     if (!this.xrSessionActive) return;
-
     const pads = this.data.pads;
 
     // Leemos SIN RECREAR NADA
@@ -66,10 +70,32 @@ AFRAME.registerComponent("test-joystick", {
 
       // 🔘 Botones
       gp.buttons.forEach((btn, i) => {
+        const btnstate = pad.buttonState[i];
+
         if (btn.pressed) {
-          console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
+          btnstate.accumulatedTime += deltaTime;
+
+          if (
+            !btnstate.pressed &&
+            btnstate.accumulatedTime >= this.data.Holding
+          ) {
+            console.log(`🔒 Keep Pressed ${hand} #${i}`);
+            btnstate.pressed = true;
+          }
+        } else {
+          if (
+            btnstate.accumulatedTime > 0 &&
+            btnstate.accumulatedTime < this.data.Holding
+          ) {
+            console.log(`🎯 Click ${hand} #${i}`);
+          }
+          // Reset estado
+          btnstate.accumulatedTime = 0;
+          btnstate.pressed = false;
         }
       });
+
+
 
       // 🕹 Joystick
       if (gp.axes.length >= 2) {
@@ -121,7 +147,6 @@ AFRAME.registerComponent("test-joystick", {
             this.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
 
             // Aplicar posición acumulada fuera para modo ente, que el jugador elija su altura, sino aquí: rig.object3D.position.y = this.verticalPos;
-
           }
           // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
           else {
