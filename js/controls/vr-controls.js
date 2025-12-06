@@ -8,12 +8,19 @@ AFRAME.registerComponent("test-joystick", {
     console.log("🟢 Componente Test Joystick Quest inicializado");
 
     this.xrSessionActive = false;
+    this.xrReferenceSpace = null;
 
     this.el.sceneEl.addEventListener("enter-vr", () => {
       const session = this.el.sceneEl.xrSession;
       if (!session) return;
 
       this.xrSessionActive = true;
+
+      // Necesario para calcular posiciones de grip y hand
+      session.requestReferenceSpace("local").then((refSpace) => {
+        this.xrReferenceSpace = refSpace;
+      });
+
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
@@ -30,7 +37,6 @@ AFRAME.registerComponent("test-joystick", {
               source: source,
               axes: source.gamepad.axes,
               buttons: source.gamepad.buttons,
-              isGripped: false, // ← estado del grip sensor
             };
             console.log(`🎮 Gamepad añadido: ${hand}`);
           }
@@ -42,7 +48,6 @@ AFRAME.registerComponent("test-joystick", {
               source: source,
               hand: source.hand,
             };
-
             console.log(`🖐 HAND añadido: ${hand} (tracking hand)`);
           }
         });
@@ -52,7 +57,6 @@ AFRAME.registerComponent("test-joystick", {
          * ──────────────────────────────────────────────── */
         evt.removed.forEach((source) => {
           const hand = source.handedness || "unknown";
-
           if (this.data.pads[hand]) {
             console.log(
               `❌ InputSource eliminado (${this.data.pads[hand].type}): ${hand}`
@@ -66,14 +70,16 @@ AFRAME.registerComponent("test-joystick", {
     this.el.sceneEl.addEventListener("exit-vr", () => {
       this.xrSessionActive = false;
       this.data.pads = {};
+      this.xrReferenceSpace = null;
       console.log("🔴 Saliendo de VR");
     });
   },
 
-  tick: function () {
-    if (!this.xrSessionActive) return;
+  tick: function (time, deltaTime) {
+    if (!this.xrSessionActive || !this.xrReferenceSpace) return;
 
     const pads = this.data.pads;
+    const frame = this.el.sceneEl.xrFrame;
 
     for (const hand in pads) {
       const pad = pads[hand];
@@ -84,32 +90,49 @@ AFRAME.registerComponent("test-joystick", {
       if (pad.type === "controller") {
         const gp = pad.source.gamepad;
 
-        // 🔥 SENSOR DE GRIP REAL (analógico)
-        const gripValue = gp.buttons[1]?.value ?? 0;
-        pad.isGripped = gripValue > 0.15;
-
-        // 🧠 Si NO lo estás agarrando → ignoramos el mando
-        if (!pad.isGripped) {
-          //console.log(`(🟡 ${hand}) mando suelto → ignorado`);
-          continue;
-        }
-
-        // 🔘 Botones
+        // Botones
         gp.buttons.forEach((btn, i) => {
           if (btn.pressed) {
             console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
           }
         });
 
-        // 🕹 Joystick
+        // Joystick
         if (gp.axes.length >= 2) {
           const x = gp.axes[0] || gp.axes[2] || 0;
           const y = gp.axes[1] || gp.axes[3] || 0;
-
           if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
             console.log(
               `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
             );
+          }
+        }
+
+        // ────────────────────────────────────────────────
+        // Detector de proximidad grip → hand (wrist, según la distancia de la muñeca)
+        if (
+          pad.source.gripSpace &&
+          pads[hand.replace("left", "right") || hand]
+        ) {
+          const gripPose = frame.getPose(
+            pad.source.gripSpace,
+            this.xrReferenceSpace
+          );
+          const handPad = pads[hand];
+          if (handPad && handPad.type === "hand") {
+            const handObj = handPad.hand;
+            const wrist = handObj.get("wrist");
+            if (gripPose && wrist) {
+              const dx = gripPose.transform.position.x - wrist.x;
+              const dy = gripPose.transform.position.y - wrist.y;
+              const dz = gripPose.transform.position.z - wrist.z;
+              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+              if (distance < 0.05) {
+                console.log(`${hand} → usando controller`);
+              } else {
+                console.log(`${hand} → usando hand tracking`);
+              }
+            }
           }
         }
       }
@@ -119,10 +142,7 @@ AFRAME.registerComponent("test-joystick", {
        * ──────────────────────────────────────────────── */
       if (pad.type === "hand") {
         const handObj = pad.hand;
-
-        // Ejemplo: detectar si el índice está visible
         const indexTip = handObj.get?.("index-finger-tip");
-
         if (indexTip) {
           console.log(`👉 Mano ${hand}: índice tracking OK`);
         }
