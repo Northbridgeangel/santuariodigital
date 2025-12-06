@@ -100,8 +100,9 @@ AFRAME.registerComponent("test-joystick", {
         const yaw = Math.atan2(camDir.x, camDir.z);
 
         // Inicializar acumulador vertical si no existe
-        if (rig.userData.verticalPos === undefined)
-          rig.userData.verticalPos = rig.object3D.position.y;
+        if (this.verticalPos === undefined) {
+          this.verticalPos = rig.object3D.position.y;
+        }
 
         // ---------------------------------------------------
         // 🎮 JOYSTICK IZQUIERDO
@@ -116,10 +117,11 @@ AFRAME.registerComponent("test-joystick", {
 
           // 🟩 Flight Mode → adelante/atrás se convierte en subir/bajar con acumulación
           if (isFlying) {
-            // Sumar movimiento vertical al acumulador
-            rig.userData.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
+            /// Sumar movimiento vertical al acumulador
+            this.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
+
             // Aplicar posición acumulada
-            rig.object3D.position.y = rig.userData.verticalPos;
+            rig.object3D.position.y = this.verticalPos;
           }
           // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
           else {
@@ -137,7 +139,7 @@ AFRAME.registerComponent("test-joystick", {
         if (hand === "right") {
           // 🟥 Rotación del rig (yaw)
           if (Math.abs(x) > 0.01) {
-            rig.object3D.rotation.y -= x * Speed; 
+            rig.object3D.rotation.y -= x * Speed;
           }
 
           // 🟥 Movimiento hacia adelante/atrás relativo al YAW
