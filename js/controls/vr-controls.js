@@ -73,31 +73,31 @@ AFRAME.registerComponent("test-joystick", {
 
       // 🕹 Joystick
       if (gp.axes.length >= 2) {
-        const x = gp.axes[0] || gp.axes[2] || 0;
-        const y = gp.axes[1] || gp.axes[3] || 0;
+        const x = gp.axes[0] || gp.axes[2] || 0; // izquierda/derecha
+        const y = gp.axes[1] || gp.axes[3] || 0; // adelante/atrás
 
         const Speed = 0.02;
 
+        // Solo actuamos si realmente se está moviendo
         if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
-          // 1️⃣ Obtener flag global de vuelo
+          // 1️⃣ Flag global flight mode
           const scene = this.el.sceneEl;
           const isFlying = scene.isFlyMode === true;
 
-          // 2️⃣ Obtener rig
+          // 2️⃣ Rig
           const rig = document.querySelector("#rig");
           if (!rig) return;
 
-          // 3️⃣ Obtener cámara dentro del rig
+          // 3️⃣ Cámara
           const cam =
             rig.querySelector("[camera]") || rig.querySelector("a-camera");
           if (!cam) return;
 
-          // 4️⃣ Si estamos en modo vuelo Y este es el joystick izquierdo:
-          if (isFlying && hand === "left") {
-            // Movimiento vertical (y → altura)
-            rig.object3D.position.y += y * Speed; // y+ sube, y- baja
-
-            // Lateralidad izquierda/derecha sigue igual que antes: orientada a la cámara
+          // -----------------------------------------------------------------------------
+          //                           🎮 JOYSTICK IZQUIERDO
+          // -----------------------------------------------------------------------------
+          if (hand === "left") {
+            // 🟦 SIEMPRE: Movimiento lateral izquierda/derecha relativo a cámara
             if (Math.abs(x) > 0.01) {
               const camDir = cam.object3D.getWorldDirection(
                 new THREE.Vector3()
@@ -110,20 +110,54 @@ AFRAME.registerComponent("test-joystick", {
               rig.object3D.position.add(lateral.multiplyScalar(Speed));
             }
 
-            return; // Muy importante: no seguir al movimiento normal
+            // 🟩 Flight mode → adelante/atrás se convierte en subir/bajar
+            if (isFlying) {
+              if (Math.abs(y) > 0.01) {
+                rig.object3D.position.y += -y * Speed;
+                // (-y) porque en tu mando: adelante=negativo, atrás=positivo
+              }
+              return; // No seguir al modo normal
+            }
+
+            // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás
+            const moveVector = new THREE.Vector3(0, 0, y);
+
+            const camDir = cam.object3D.getWorldDirection(new THREE.Vector3());
+            const angle = Math.atan2(camDir.x, camDir.z);
+
+            moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+
+            rig.object3D.position.add(moveVector.multiplyScalar(Speed));
+
+            return;
           }
 
-          // 5️⃣ Si NO estamos en vuelo (modo normal para ambos mandos)
-          const moveVector = new THREE.Vector3(x, 0, y); // y adelante positivo
+          // -----------------------------------------------------------------------------
+          //                           🎮 JOYSTICK DERECHO
+          // -----------------------------------------------------------------------------
+          if (hand === "right") {
+            // 🟥 DERECHA/IZQUIERDA → ROTAR el rig SIEMPRE
+            if (Math.abs(x) > 0.01) {
+              rig.object3D.rotation.y += x * Speed;
+              // positivo para que derecha rote a derecha y viceversa
+            }
 
-          // Orientar a la cámara
-          const camDir = cam.object3D.getWorldDirection(new THREE.Vector3());
-          const angle = Math.atan2(camDir.x, camDir.z);
+            // 🟥 ADELANTE/ATRÁS → MOVERSE hacia adelante/atrás SIEMPRE
+            if (Math.abs(y) > 0.01) {
+              const moveVector = new THREE.Vector3(0, 0, y);
 
-          moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+              const camDir = cam.object3D.getWorldDirection(
+                new THREE.Vector3()
+              );
+              const angle = Math.atan2(camDir.x, camDir.z);
 
-          // Aplicar movimiento
-          rig.object3D.position.add(moveVector.multiplyScalar(Speed));
+              moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+
+              rig.object3D.position.add(moveVector.multiplyScalar(Speed));
+            }
+
+            return;
+          }
         }
       }
     }
