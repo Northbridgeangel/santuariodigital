@@ -21,22 +21,20 @@ AFRAME.registerComponent("test-joystick", {
         evt.added.forEach((source) => {
           const hand = source.handedness || "unknown";
 
-          // 🎮 CONTROLLER
+          // Si no existe, inicializamos
+          if (!this.data.pads[hand]) {
+            this.data.pads[hand] = { source: null, hand: null };
+          }
+
+          // 🎮 Controller
           if (source.gamepad) {
-            this.data.pads[hand] = {
-              type: "controller",
-              source: source,
-            };
+            this.data.pads[hand].source = source;
             console.log(`🎮 Gamepad añadido: ${hand}`);
           }
 
-          // 🖐 HAND TRACKING
+          // 🖐 Hand tracking
           if (source.hand) {
-            this.data.pads[hand] = {
-              type: "hand",
-              source: source,
-              hand: source.hand,
-            };
+            this.data.pads[hand].hand = source.hand;
             console.log(`🖐 HAND añadido: ${hand} (tracking hand)`);
           }
         });
@@ -44,10 +42,20 @@ AFRAME.registerComponent("test-joystick", {
         // Eliminados
         evt.removed.forEach((source) => {
           const hand = source.handedness || "unknown";
-          if (this.data.pads[hand]) {
-            console.log(
-              `❌ InputSource eliminado (${this.data.pads[hand].type}): ${hand}`
-            );
+          if (!this.data.pads[hand]) return;
+
+          if (source.gamepad && this.data.pads[hand].source) {
+            console.log(`❌ Gamepad eliminado: ${hand}`);
+            this.data.pads[hand].source = null;
+          }
+
+          if (source.hand && this.data.pads[hand].hand) {
+            console.log(`❌ Hand tracking eliminado: ${hand}`);
+            this.data.pads[hand].hand = null;
+          }
+
+          // Si no queda nada, eliminamos el pad
+          if (!this.data.pads[hand].source && !this.data.pads[hand].hand) {
             delete this.data.pads[hand];
           }
         });
@@ -72,48 +80,36 @@ AFRAME.registerComponent("test-joystick", {
 
     for (const hand in pads) {
       const pad = pads[hand];
+      const gp = pad.source; // gamepad o null
+      const handObj = pad.hand; // hand tracking o null
 
-      // 1️⃣ Controller: botones y joystick
-      if (pad.type === "controller") {
-        const gp = pad.source.gamepad;
-        if (gp) {
-          // Botones
-          gp.buttons.forEach((btn, i) => {
-            if (btn.pressed) {
-              console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
-            }
-          });
+      // 🔘 Botones y joystick del controller
+      if (gp) {
+        gp.gamepad?.buttons?.forEach((btn, i) => {
+          if (btn.pressed) console.log(`🎯 Botón XR ${hand} #${i} pulsado`);
+        });
 
-          // Joystick
-          if (gp.axes.length >= 2) {
-            const x = gp.axes[0] || gp.axes[2] || 0;
-            const y = gp.axes[1] || gp.axes[3] || 0;
-            if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
-              console.log(
-                `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
-              );
-            }
-          }
+        const axes = gp.gamepad?.axes || [];
+        if (axes.length >= 2) {
+          const x = axes[0] || axes[2] || 0;
+          const y = axes[1] || axes[3] || 0;
+          if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01)
+            console.log(
+              `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
+            );
         }
       }
 
-      // 2️⃣ Hand tracking + grip distance
-      let handPose = null;
-      let gripPose = null;
-
-      if (pad.type === "hand") {
-        handPose = pad.hand.get?.("index-finger-tip") || null;
-      }
-
-      if (pad.type === "controller" && pad.source.gripSpace) {
-        gripPose = frame.getPose(pad.source.gripSpace, xrRefSpace);
-      }
+      // Hand tracking + grip distance
+      let handPose = handObj?.get?.("index-finger-tip") || null;
+      let gripPose = gp?.gripSpace
+        ? frame.getPose(gp.gripSpace, xrRefSpace)
+        : null;
 
       if (handPose && gripPose) {
         const distanceZ = Math.abs(
           gripPose.transform.position.z - handPose.transform.position.z
         );
-
         if (distanceZ < 0.05) {
           console.log(
             `✊ ${hand}: grip cercano (${(distanceZ * 100).toFixed(
