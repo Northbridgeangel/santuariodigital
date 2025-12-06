@@ -17,11 +17,11 @@ AFRAME.registerComponent("test-joystick", {
       console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
-        // ➕ Añadidos
+        // Añadidos
         evt.added.forEach((source) => {
           const hand = source.handedness || "unknown";
 
-          // 🎮 CONTROLLER
+          // 🎮 Controller
           if (source.gamepad) {
             this.data.pads[hand] = {
               type: "controller",
@@ -32,7 +32,7 @@ AFRAME.registerComponent("test-joystick", {
             console.log(`🎮 Gamepad añadido: ${hand}`);
           }
 
-          // 🖐 HAND TRACKING
+          // 🖐 Hand tracking
           if (source.hand) {
             this.data.pads[hand] = {
               type: "hand",
@@ -43,7 +43,7 @@ AFRAME.registerComponent("test-joystick", {
           }
         });
 
-        // ➖ Eliminados
+        // Eliminados
         evt.removed.forEach((source) => {
           const hand = source.handedness || "unknown";
           if (this.data.pads[hand]) {
@@ -64,8 +64,7 @@ AFRAME.registerComponent("test-joystick", {
   },
 
   tick: function (time, deltaTime, frame) {
-    if (!this.xrSessionActive) return;
-    if (!frame) return; // prevenir colapso si no hay frame
+    if (!this.xrSessionActive || !frame) return;
 
     const pads = this.data.pads;
     const renderer = this.el.sceneEl.renderer;
@@ -76,7 +75,7 @@ AFRAME.registerComponent("test-joystick", {
     for (const hand in pads) {
       const pad = pads[hand];
 
-      // 1️⃣ CONTROLLER
+      // 1️⃣ Botones y joystick siempre que sea controller
       if (pad.type === "controller") {
         const gp = pad.source.gamepad;
 
@@ -100,47 +99,41 @@ AFRAME.registerComponent("test-joystick", {
         }
       }
 
-      // 2️⃣ HAND TRACKING + GRIP DISTANCE
-      if (pad.type === "hand" || pad.type === "controller") {
-        const handPad = pad.type === "hand" ? pad : null;
-        const controllerPad = pad.type === "controller" ? pad : null;
+      // 2️⃣ Hand tracking y grip distance
+      let handPose = null;
+      if (pad.type === "hand") {
+        const indexTip = pad.hand.get?.("index-finger-tip");
+        if (indexTip) handPose = indexTip;
+      }
 
-        let handPose = null;
-        if (handPad) {
-          const indexTip = handPad.hand.get?.("index-finger-tip");
-          if (indexTip) handPose = indexTip;
-        }
+      let gripPose = null;
+      if (pad.type === "controller" && pad.source.gripSpace) {
+        gripPose = frame.getPose(pad.source.gripSpace, xrRefSpace);
+      }
 
-        let gripPose = null;
-        if (controllerPad && controllerPad.source.gripSpace) {
-          gripPose = frame.getPose(controllerPad.source.gripSpace, xrRefSpace);
-        }
+      // Comparación distancia Z
+      if (handPose && gripPose) {
+        const distanceZ = Math.abs(
+          gripPose.transform.position.z - handPose.transform.position.z
+        );
 
-        if (handPose && gripPose) {
-          const distanceZ = Math.abs(
-            gripPose.transform.position.z - handPose.transform.position.z
+        if (distanceZ < 0.05) {
+          console.log(
+            `✊ ${hand}: grip cercano (${(distanceZ * 100).toFixed(
+              1
+            )} cm) → usando controller`
           );
-
-          if (distanceZ < 0.05) {
-            // 👊 Mano agarrando: mostrar controller
-            console.log(
-              `✊ ${hand}: grip cercano (${(distanceZ * 100).toFixed(
-                1
-              )} cm) → usando controller`
-            );
-          } else {
-            // ✋ Mano libre: usar hand tracking
-            console.log(
-              `✋ ${hand}: grip lejano (${(distanceZ * 100).toFixed(
-                1
-              )} cm) → usando mano`
-            );
-          }
-        } else if (handPose) {
-          console.log(`🖐 ${hand}: solo hand tracking`);
-        } else if (gripPose) {
-          console.log(`🎮 ${hand}: solo controller grip`);
+        } else {
+          console.log(
+            `✋ ${hand}: grip lejano (${(distanceZ * 100).toFixed(
+              1
+            )} cm) → usando mano`
+          );
         }
+      } else if (handPose) {
+        console.log(`🖐 ${hand}: solo hand tracking`);
+      } else if (gripPose) {
+        console.log(`🎮 ${hand}: solo controller grip`);
       }
     }
   },
