@@ -78,83 +78,70 @@ AFRAME.registerComponent("test-joystick", {
 
         const Speed = 0.02;
 
-        // Solo actuamos si realmente se está moviendo algo
-        if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
-          // ---------------------------------------------------
-          // GLOBALS: Scene, Rig, Camera
-          // ---------------------------------------------------
-          const scene = this.el.sceneEl;
-          const isFlying = scene.isFlyMode === true;
+        // ---------------------------------------------------
+        // GLOBALS: Scene, Rig, Camera
+        // ---------------------------------------------------
+        const scene = this.el.sceneEl;
+        const isFlying = scene.isFlyMode === true;
 
-          const rig = document.querySelector("#rig");
-          if (!rig) return;
+        const rig = document.querySelector("#rig");
+        if (!rig) return;
 
-          const cam =
-            rig.querySelector("[camera]") || rig.querySelector("a-camera");
-          if (!cam) return;
+        const cam =
+          rig.querySelector("[camera]") || rig.querySelector("a-camera");
+        if (!cam) return;
 
-          // ---------------------------------------------------
-          // GLOBALS: Dirección real de cámara (YAW + PITCH)
-          // ---------------------------------------------------
-          const camDir = cam.object3D.getWorldDirection(new THREE.Vector3());
-          camDir.normalize();
+        // ---------------------------------------------------
+        // GLOBALS: Dirección real de cámara (YAW + PITCH)
+        // ---------------------------------------------------
+        const camDir = cam.object3D.getWorldDirection(new THREE.Vector3());
+        camDir.normalize();
 
-          const yaw = Math.atan2(camDir.x, camDir.z);
-          const pitch = Math.asin(camDir.y);
+        const yaw = Math.atan2(camDir.x, camDir.z);
+        const pitch = Math.asin(camDir.y);
 
-          // ---------------------------------------------------
-          //                      🎮 JOYSTICK IZQUIERDO
-          // ---------------------------------------------------
-          if (hand === "left") {
-            // 🟦 (Siempre) Movimiento lateral izquierda/derecha relativo al YAW
-            if (Math.abs(x) > 0.01) {
-              const lateral = new THREE.Vector3(x, 0, 0);
-              lateral.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-              rig.object3D.position.add(lateral.multiplyScalar(Speed));
-            }
-
-            // 🟩 (Flight Mode) Adelante/atrás → Subir/bajar con PITCH real
-            if (isFlying) {
-              if (Math.abs(y) > 0.01) {
-                // Vector vertical que sigue el pitch real de la cámara
-                const vertical = new THREE.Vector3(0, y, 0);
-
-                // Aplicamos pitch para subir/bajar según inclinación de la cámara
-                vertical.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
-
-                // Aplicamos yaw si quieres que gire con la cámara horizontal
-                // vertical.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-
-                // Acumular (NO resetea)
-                rig.object3D.position.add(vertical.multiplyScalar(Speed));
-              }
-            }
-
-            // 🟧 (Modo normal) Adelante/atrás mueve hacia adelante/atrás con yaw
-            else {
-              if (Math.abs(y) > 0.01) {
-                const forward = new THREE.Vector3(0, 0, y);
-                forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-                rig.object3D.position.add(forward.multiplyScalar(Speed));
-              }
-            }
+        // ---------------------------------------------------
+        // 🎮 JOYSTICK IZQUIERDO
+        // ---------------------------------------------------
+        if (hand === "left") {
+          // 🟦 Movimiento lateral izquierda/derecha relativo al YAW
+          if (Math.abs(x) > 0.01) {
+            const lateral = new THREE.Vector3(x, 0, 0);
+            lateral.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            rig.object3D.position.add(lateral.multiplyScalar(Speed));
           }
 
-          // ---------------------------------------------------
-          //                      🎮 JOYSTICK DERECHO
-          // ---------------------------------------------------
-          if (hand === "right") {
-            // 🟥 Rotación del rig (yaw)
-            if (Math.abs(x) > 0.01) {
-              rig.object3D.rotation.y -= x * 0.1;
-            }
+          // 🟩 Flight Mode → Adelante/atrás del joystick → Subir/bajar vertical
+          if (isFlying && Math.abs(y) > 0.01) {
+            const vertical = new THREE.Vector3(0, y, 0);
+            // Aplicamos pitch para subir/bajar según inclinación real de la cámara
+            vertical.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+            // Acumular movimiento (NO resetea al soltar)
+            rig.object3D.position.add(vertical.multiplyScalar(Speed));
+          }
 
-            // 🟥 Movimiento hacia adelante/atrás relativo al YAW
-            if (Math.abs(y) > 0.01) {
-              const forward = new THREE.Vector3(0, 0, y);
-              forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-              rig.object3D.position.add(forward.multiplyScalar(Speed));
-            }
+          // 🟧 Modo normal → Adelante/atrás mueve hacia adelante/atrás con yaw
+          if (!isFlying && Math.abs(y) > 0.01) {
+            const forward = new THREE.Vector3(0, 0, y);
+            forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            rig.object3D.position.add(forward.multiplyScalar(Speed));
+          }
+        }
+
+        // ---------------------------------------------------
+        // 🎮 JOYSTICK DERECHO
+        // ---------------------------------------------------
+        if (hand === "right") {
+          // 🟥 Rotación del rig (yaw)
+          if (Math.abs(x) > 0.01) {
+            rig.object3D.rotation.y -= x * 0.008; //Rotación suave para mayor comodidad
+          }
+
+          // 🟥 Movimiento hacia adelante/atrás relativo al YAW
+          if (Math.abs(y) > 0.01) {
+            const forward = new THREE.Vector3(0, 0, y);
+            forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            rig.object3D.position.add(forward.multiplyScalar(Speed));
           }
         }
       }
