@@ -93,9 +93,9 @@ AFRAME.registerComponent("test-joystick", {
             rig.querySelector("[camera]") || rig.querySelector("a-camera");
           if (!cam) return;
 
-          // -----------------------------------------------------------------------------
+          // -------------------------------------------------------------------------
           //                           🎮 JOYSTICK IZQUIERDO
-          // -----------------------------------------------------------------------------
+          // -------------------------------------------------------------------------
           if (hand === "left") {
             // 🟦 SIEMPRE: Movimiento lateral izquierda/derecha relativo a cámara
             if (Math.abs(x) > 0.01) {
@@ -110,49 +110,43 @@ AFRAME.registerComponent("test-joystick", {
               rig.object3D.position.add(lateral.multiplyScalar(Speed));
             }
 
-            // 🟩 Flight mode → adelante/atrás se convierte en subir/bajar
+            // 🟩 Flight mode → adelante/atrás se convierte en subir/bajar (persistente)
             if (isFlying) {
-              if (Math.abs(y) > 0.01) {
-                rig.object3D.position.y += -y * Speed;
-                // (-y) porque en tu mando: adelante=negativo, atrás=positivo
-              }
-              return; // No seguir al modo normal
+              rig.object3D.position.y += -y * Speed; // (-y) porque adelante=negativo, atrás=positivo
+              // Mantener altura persistente redondeando para evitar "reset"
+              rig.object3D.position.y = parseFloat(
+                rig.object3D.position.y.toFixed(3)
+              );
+              return; // No seguir al movimiento normal
             }
 
             // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás
             const moveVector = new THREE.Vector3(0, 0, y);
-
             const camDir = cam.object3D.getWorldDirection(new THREE.Vector3());
             const angle = Math.atan2(camDir.x, camDir.z);
-
             moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-
             rig.object3D.position.add(moveVector.multiplyScalar(Speed));
 
             return;
           }
 
-          // -----------------------------------------------------------------------------
+          // -------------------------------------------------------------------------
           //                           🎮 JOYSTICK DERECHO
-          // -----------------------------------------------------------------------------
+          // -------------------------------------------------------------------------
           if (hand === "right") {
             // 🟥 DERECHA/IZQUIERDA → ROTAR el rig SIEMPRE
             if (Math.abs(x) > 0.01) {
-              rig.object3D.rotation.y += x * Speed;
-              // positivo para que derecha rote a derecha y viceversa
+              rig.object3D.rotation.y -= x * 0.1; // velocidad más baja para evitar mareos
             }
 
             // 🟥 ADELANTE/ATRÁS → MOVERSE hacia adelante/atrás SIEMPRE
             if (Math.abs(y) > 0.01) {
               const moveVector = new THREE.Vector3(0, 0, y);
-
               const camDir = cam.object3D.getWorldDirection(
                 new THREE.Vector3()
               );
               const angle = Math.atan2(camDir.x, camDir.z);
-
               moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-
               rig.object3D.position.add(moveVector.multiplyScalar(Speed));
             }
 
