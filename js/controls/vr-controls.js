@@ -83,8 +83,8 @@ AFRAME.registerComponent("test-joystick", {
 
           // Movimiento simple hacia adelante/atrás usando el eje Y
           if (rig) {
-            rig.object3D.position.z += y * 0.03; // ajusta velocidad
-            rig.object3D.position.x -= x * 0.03; // opcional para lateral
+            rig.object3D.position.z += y * 0.01; // adelante/atrás
+            rig.object3D.position.x += x * 0.01; // izquierda/derecha
             // // Log de la posición del rig
             console.log(
               `🚶‍♂️ Rig posición: X=${rig.object3D.position.x.toFixed(
