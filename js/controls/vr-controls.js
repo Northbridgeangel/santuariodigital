@@ -117,10 +117,11 @@ AFRAME.registerComponent("test-joystick", {
 
           // 🟩 Flight Mode → adelante/atrás se convierte en subir/bajar con acumulación
           if (isFlying) {
-            if (Math.abs(y) > 0.01) {
-              this.verticalPos += -y * Speed;/// Sumar movimiento vertical al acumulador
-              rig.object3D.position.y = this.verticalPos;// Aplicar posición acumulada
-            }
+            /// Sumar movimiento vertical al acumulador
+            this.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
+
+            // Aplicar posición acumulada fuera para modo ente, que el jugador elija su altura, sino aquí: rig.object3D.position.y = this.verticalPos;
+
           }
           // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
           else {
@@ -130,6 +131,8 @@ AFRAME.registerComponent("test-joystick", {
               rig.object3D.position.add(forward.multiplyScalar(Speed));
             }
           }
+          // Aplicar altura vertical actual
+          rig.object3D.position.y = this.verticalPos;
         }
 
         // ---------------------------------------------------
