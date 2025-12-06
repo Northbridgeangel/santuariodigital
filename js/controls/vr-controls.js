@@ -1,4 +1,4 @@
-// vr-controls.js -> sistema PAD 
+// vr-controls.js -> sistema PAD
 AFRAME.registerComponent("test-joystick", {
   schema: {
     pads: { default: {} }, // left, right, unknown
@@ -80,6 +80,20 @@ AFRAME.registerComponent("test-joystick", {
           console.log(
             `🕹 Joystick XR [${hand}] X=${x.toFixed(2)}, Y=${y.toFixed(2)}`
           );
+
+          // Movimiento simple hacia adelante/atrás usando el eje Y
+          if (rig) {
+            rig.object3D.position.z -= y * 0.05; // ajusta velocidad
+            rig.object3D.position.x += x * 0.05; // opcional para lateral
+            // // Log de la posición del rig
+            console.log(
+              `🚶‍♂️ Rig posición: X=${rig.object3D.position.x.toFixed(
+                2
+              )}, Y=${rig.object3D.position.y.toFixed(
+                2
+              )}, Z=${rig.object3D.position.z.toFixed(2)}`
+            );
+          }
         }
       }
     }
