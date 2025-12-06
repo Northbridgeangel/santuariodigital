@@ -89,7 +89,7 @@ AFRAME.registerComponent("test-joystick", {
               rig.querySelector("[camera]") || rig.querySelector("a-camera");
             if (cam) {
               // Crear vector de movimiento basado en joystick
-              const moveVector = new THREE.Vector3(x, 0, -y); // -y porque adelante es negativo
+              const moveVector = new THREE.Vector3(x, 0, y); // y porque adelante es positivo
 
               // Obtener dirección de la cámara
               const camDir = cam.object3D.getWorldDirection(
