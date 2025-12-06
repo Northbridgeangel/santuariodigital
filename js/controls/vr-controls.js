@@ -98,7 +98,10 @@ AFRAME.registerComponent("test-joystick", {
         camDir.normalize();
 
         const yaw = Math.atan2(camDir.x, camDir.z);
-        const pitch = Math.asin(camDir.y);
+
+        // Inicializar acumulador vertical si no existe
+        if (rig.userData.verticalPos === undefined)
+          rig.userData.verticalPos = rig.object3D.position.y;
 
         // ---------------------------------------------------
         // 🎮 JOYSTICK IZQUIERDO
@@ -111,20 +114,20 @@ AFRAME.registerComponent("test-joystick", {
             rig.object3D.position.add(lateral.multiplyScalar(Speed));
           }
 
-          // 🟩 Flight Mode → Adelante/atrás del joystick → Subir/bajar vertical
-          if (isFlying && Math.abs(y) > 0.01) {
-            const vertical = new THREE.Vector3(0, y, 0);
-            // Aplicamos pitch para subir/bajar según inclinación real de la cámara
-            vertical.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
-            // Acumular movimiento (NO resetea al soltar)
-            rig.object3D.position.add(vertical.multiplyScalar(Speed));
+          // 🟩 Flight Mode → adelante/atrás se convierte en subir/bajar con acumulación
+          if (isFlying) {
+            // Sumar movimiento vertical al acumulador
+            rig.userData.verticalPos += -y * Speed; // adelante = negativo, atrás = positivo
+            // Aplicar posición acumulada
+            rig.object3D.position.y = rig.userData.verticalPos;
           }
-
-          // 🟧 Modo normal → Adelante/atrás mueve hacia adelante/atrás con yaw
-          if (!isFlying && Math.abs(y) > 0.01) {
-            const forward = new THREE.Vector3(0, 0, y);
-            forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-            rig.object3D.position.add(forward.multiplyScalar(Speed));
+          // 🟧 Modo normal → adelante/atrás mueve hacia adelante/atrás con YAW
+          else {
+            if (Math.abs(y) > 0.01) {
+              const forward = new THREE.Vector3(0, 0, y);
+              forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+              rig.object3D.position.add(forward.multiplyScalar(Speed));
+            }
           }
         }
 
@@ -132,16 +135,23 @@ AFRAME.registerComponent("test-joystick", {
         // 🎮 JOYSTICK DERECHO
         // ---------------------------------------------------
         if (hand === "right") {
-          // 🟥 Rotación del rig (yaw)
+          const rotSensitivity = 0.01; // sensibilidad máxima para rotación
+          const moveSensitivity = Speed; // sensibilidad para movimiento hacia adelante/atrás
+
+          // 🟥 Rotación del rig (yaw) con prioridad al movimiento adelante/atrás
           if (Math.abs(x) > 0.01) {
-            rig.object3D.rotation.y -= x * 0.008; //Rotación suave para mayor comodidad
+            // Reducir rotación si el joystick está empujado hacia adelante/atrás
+            const yFactor = 1 - Math.min(Math.abs(y) / 0.8, 1);
+            // yFactor = 1 cuando y ~ 0 → rotación plena
+            // yFactor = 0 cuando y ~ ±0.8 → rotación casi nula
+            rig.object3D.rotation.y -= x * rotSensitivity * yFactor;
           }
 
           // 🟥 Movimiento hacia adelante/atrás relativo al YAW
           if (Math.abs(y) > 0.01) {
             const forward = new THREE.Vector3(0, 0, y);
             forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-            rig.object3D.position.add(forward.multiplyScalar(Speed));
+            rig.object3D.position.add(forward.multiplyScalar(moveSensitivity));
           }
         }
       }
