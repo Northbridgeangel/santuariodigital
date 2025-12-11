@@ -142,14 +142,25 @@ AFRAME.registerComponent("click-hover-detector", {
           const controllerEl = document.querySelector(`#${hand}-controller`);
           if (!controllerEl) return;
 
-          const origin = controllerEl.object3D.getWorldPosition(
-            new THREE.Vector3()
-          );
-          const direction = controllerEl.object3D.getWorldDirection(
-            new THREE.Vector3()
-          );
+          const comp = controllerEl.components.raycaster;
+          if (!comp || !comp.raycaster) return;
 
-          checkHover(origin, direction);
+          const ray = comp.raycaster;
+
+          // Ajustamos distancia máxima
+          ray.far = this.data.maxDistance;
+
+          // Pasamos el raycaster REAL al detector
+          const hit = ray.intersectObjects(interactiveMeshes, true)[0];
+          const mesh = hit?.object || null;
+
+          if (mesh) {
+            handleHover(mesh);
+            sceneEl.selectedMeshUnderPointer = mesh;
+          } else {
+            handleHoverExit();
+            sceneEl.selectedMeshUnderPointer = null;
+          }
         });
       };
     });
