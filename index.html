@@ -23,11 +23,10 @@
     <script src="./js/controls/mobileControl.js"></script>
     <script src="./js/controls/vr-controls.js"></script>
     <script src="./js/controls/fly-mode.js"></script>
-    <script src="./js/components/handleClick.js"></script>
     <script src="./js/components/mirrormaterial.js"></script>
-    <script src="./js/components/DetectorClickHover.js"></script>
+    <script src="./js/components/click-hover-detector.js"></script>
+    <script src="./js/components/click-hover-handle.js.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
-    <script src="./js/components/auto-raycast.js"></script>
     <script src="./js/debug-overlay.js"></script>
 
     <script>
@@ -133,20 +132,18 @@
         
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down swipe-left-right
-                clickable position="0 0.25 0" auto-raycaster>
+                position="0 0.25 0">
             </a-entity>
         
             <!-- CONTROLADOR IZQUIERDO -->
-            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left" hand-tracking-controls="hand: left"
-                raycaster="objects: .interactable; far: 20">
+            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left" hand-tracking-controls="hand: left">
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat; opacity: 0.8">
                 </a-entity>
             </a-entity>
             
             <!-- CONTROLADOR DERECHO -->
-            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right" hand-tracking-controls="hand: right"
-                raycaster="objects: .interactable; far: 20">
+            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right" hand-tracking-controls="hand: right">
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006" material="color: white; shader: flat; opacity: 0.8">
                 </a-entity>
@@ -156,8 +153,7 @@
 
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" check-door
-            class="interactable" auto-raycast-tag></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" click-hover-detector="maxDistance: 5" check-door></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
@@ -178,7 +174,7 @@
             </a-plane>
 
             <!-- Indicador FlightMode que será botónes YES/NO -->
-            <a-entity id="y-n" class="interactable" hud-autoscale hud-child-position-scale position="-0.06 -0.04 0">
+            <a-entity id="y-n" hud-autoscale hud-child-position-scale position="-0.06 -0.04 0">
                 <a-plane src="./assets/Wings-HUD.svg" width="0.02" height="0.01" transparent="true"
                     material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
                 </a-plane>
