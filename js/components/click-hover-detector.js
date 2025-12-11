@@ -34,20 +34,34 @@ AFRAME.registerComponent("click-hover-detector", {
         interactiveMeshes.push(child);
       });
 
-      if (!interactiveMeshes.length)
-        console.warn("⚠️ No se encontraron meshes interactivos");
+      if (interactiveMeshes.length === 0) {
+        console.warn("⚠️ No se encontraron meshes interactivos.");
+      } else {
+        console.log(
+          `🎨 Meshes detectados (${interactiveMeshes.length}):`,
+          interactiveMeshes.map((m) => m.name)
+        );
+      }
 
-      // 🔹 Raycaster
+      // ==================================================
+      // 🔹 Raycaster único
+      // ==================================================
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
       let pointerDownPos = { x: 0, y: 0 };
       const CLICK_THRESHOLD = 5;
 
-      // 🔹 Función unificada de raycast + hover
-      function checkHover(origin, direction) {
+      // ==================================================
+      // 🔹 Función generalizada de Raycast + Hover
+      // ==================================================
+      const checkHover = (origin, direction) => {
+        if (!origin || !direction) return;
+
+        raycaster.far = this.data.maxDistance; // ← alcance centralizado
         raycaster.set(origin, direction);
-        const intersects = raycaster.intersectObjects(interactiveMeshes, true);
-        const mesh = intersects[0]?.object || null;
+
+        const hit = raycaster.intersectObjects(interactiveMeshes, true)[0];
+        const mesh = hit?.object || null;
 
         if (mesh) {
           handleHover(mesh);
@@ -56,49 +70,56 @@ AFRAME.registerComponent("click-hover-detector", {
           handleHoverExit();
           sceneEl.selectedMeshUnderPointer = null;
         }
-      }
+      };
 
+      // ==================================================
       // 🔹 Desktop / Mobile: raycast desde cámara + pointer
-      function pointerRaycast(event) {
+      // ==================================================
+      const pointerRaycast = (event) => {
         if (!sceneEl.camera) return;
+
         const rect = sceneEl.canvas.getBoundingClientRect();
         pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(pointer, sceneEl.camera);
-        const intersects = raycaster.intersectObjects(interactiveMeshes, true);
-        const mesh = intersects[0]?.object || null;
-        if (mesh) handleHover(mesh);
-        else handleHoverExit();
-      }
+        raycaster.far = this.data.maxDistance;
 
-      // 🔹 Pointer down/up para Desktop/Mobile
-      function onPointerDown(event) {
-        pointerDownPos.x = event.clientX;
-        pointerDownPos.y = event.clientY;
-      }
+        const hit = raycaster.intersectObjects(interactiveMeshes, true)[0];
+        const mesh = hit?.object || null;
 
-      function onPointerUp(event) {
-        const dx = Math.abs(event.clientX - pointerDownPos.x);
-        const dy = Math.abs(event.clientY - pointerDownPos.y);
+        mesh ? handleHover(mesh) : handleHoverExit();
+      };
+
+      const onPointerDown = (e) => {
+        pointerDownPos.x = e.clientX;
+        pointerDownPos.y = e.clientY;
+      };
+
+      const onPointerUp = (e) => {
+        const dx = Math.abs(e.clientX - pointerDownPos.x);
+        const dy = Math.abs(e.clientY - pointerDownPos.y);
         if (dx > CLICK_THRESHOLD || dy > CLICK_THRESHOLD) return;
 
         if (!sceneEl.camera) return;
+
         const rect = sceneEl.canvas.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(pointer, sceneEl.camera);
-        const intersects = raycaster.intersectObjects(interactiveMeshes, true);
-        const mesh = intersects[0]?.object || null;
+        raycaster.far = this.data.maxDistance;
+
+        const hit = raycaster.intersectObjects(interactiveMeshes, true)[0];
+        const mesh = hit?.object || null;
+
         if (mesh) {
-          console.log(`🔴 CLICK REAL: ${mesh.name}`); // 🔹 Log del click real
+          console.log(`🔴 CLICK REAL: ${mesh.name}`);
           handleClick(mesh);
         }
-      }
+      };
 
-      // 🔹 Adjuntar eventos pointer para Desktop/Mobile
-      function attachPointerEvents() {
+      const attachPointerEvents = () => {
         const attach = () => {
           sceneEl.canvas.addEventListener("pointermove", pointerRaycast);
           sceneEl.canvas.addEventListener("pointerdown", onPointerDown);
@@ -107,11 +128,14 @@ AFRAME.registerComponent("click-hover-detector", {
         if (!sceneEl.canvas)
           sceneEl.addEventListener("renderstart", attach, { once: true });
         else attach();
-      }
+      };
+
       attachPointerEvents();
 
-      // 🔹 Tick para VR: raycast desde controladores
-      this.tick = function () {
+      // ==================================================
+      // 🔹 VR Tick: Raycast desde mando izquierdo y derecho
+      // ==================================================
+      this.tick = () => {
         if (!sceneEl.is("vr-mode")) return;
 
         ["left", "right"].forEach((hand) => {
@@ -124,7 +148,8 @@ AFRAME.registerComponent("click-hover-detector", {
           const direction = controllerEl.object3D.getWorldDirection(
             new THREE.Vector3()
           );
-          checkHover(origin, direction); // calcula intersección hasta maxDistance
+
+          checkHover(origin, direction);
         });
       };
     });

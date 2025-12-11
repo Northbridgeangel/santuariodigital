@@ -25,6 +25,7 @@ function handleClick(mesh) {
   console.log(`Mesh ${mesh.name} seleccionado`);
 }
 
+
 function handleHover(mesh) {
   // Si hay algo seleccionado distinto, no hacemos hover
   if (selectedMesh) return;
