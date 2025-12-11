@@ -32,6 +32,7 @@ function handleHover(mesh) {
   // 🔹 Si el cursor sale de un mesh anterior, reseteamos
   if (hoveredMesh && hoveredMesh !== mesh) {
     resetMesh(hoveredMesh);
+    hoveredMesh = null;
   }
 
   // 🔹 Solo hover para meshes que empiecen por "Btn"
@@ -41,9 +42,13 @@ function handleHover(mesh) {
     return;
   }
 
-  // 🔹 Aplicamos resalte hover
-  resaltarMesh(mesh, "hover");
-  hoveredMesh = mesh;
+  // 🔹 Aplicamos resalte hover SOLO si el mesh no estaba ya en hover
+  // Esto evita que el log y el resalte se repitan cada tick o pointermove
+  if (hoveredMesh !== mesh) {
+    resaltarMesh(mesh, "hover");
+    hoveredMesh = mesh;
+    console.log(`🟢 HOVER: ${mesh.name} `);
+  }
 }
 
 // 🔹 Reseteo cuando el cursor sale de cualquier mesh
