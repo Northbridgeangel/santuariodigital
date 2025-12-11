@@ -33,6 +33,7 @@ AFRAME.registerComponent("click-hover-detector", {
         }
 
         child.userData.interactable = true; // ← añadimos clase interactable
+        child.originalMaterial = child.material.clone(); // backup del material para resetMaterial
         interactiveMeshes.push(child);
       });
 
@@ -55,6 +56,7 @@ AFRAME.registerComponent("click-hover-detector", {
     const CLICK_THRESHOLD = 5;
     const raycaster = new THREE.Raycaster();
 
+    // Hover / raycast
     const pointerRaycast = (event) => {
       if (!sceneEl.camera || !modelLoaded) return;
 
@@ -95,6 +97,7 @@ AFRAME.registerComponent("click-hover-detector", {
       const mesh = hit?.object || null;
 
       if (mesh) handleClick(mesh);
+      console.log(`🔴 CLICK REAL: ${ mesh.name }`);
     };
 
     const attachPointerEvents = () => {
