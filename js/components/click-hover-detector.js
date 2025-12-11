@@ -71,6 +71,7 @@ AFRAME.registerComponent("click-hover-detector", {
         if (intersects.length > 0) {
           const mesh = intersects[0].object;
           handleHover(mesh); // disparar hover
+          console.log(`🟢 HOVER: ${mesh.name}`);
           sceneEl.selectedMeshUnderPointer = mesh; // 🔹 Actualizamos la referencia global para VR
         } else {
           handleHoverExit(); // reseteo cuando no hay intersección
