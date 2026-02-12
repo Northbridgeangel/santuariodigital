@@ -1,5 +1,5 @@
-// click-hover-detector.js
-AFRAME.registerComponent("click-hover-detector", {
+// InteractionSystem.js
+AFRAME.registerSystem("InteractionSystem", {
   schema: { maxDistance: { default: 5 } },
 
   init: function () {
@@ -21,7 +21,7 @@ AFRAME.registerComponent("click-hover-detector", {
       const modelRoot = escenario.getObject3D("mesh") || ev.detail.model;
       if (!modelRoot) return console.error("❌ No se encontró modelRoot");
 
-      console.log("✅ ClickHoverDetector activo — esperando interacciones.");
+      console.log("✅ InteractionSystem activo — esperando interacciones.");
 
       modelRoot.traverse((child) => {
         if (!child.isMesh || child.name.startsWith("Escena")) return;

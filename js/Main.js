@@ -2,7 +2,7 @@
 window.OpenCentralGlobals = {
   escenario: document.querySelector("#escenario"),
   sceneEl: document.querySelector("a-scene"),
-  interactiveMeshes: [], // ← Placeholder para registrar todos los meshes interactivos
+  interactiveMeshes: [], // ← Placeholder siempre accesible para registrar todos los meshes interactivos
 };
 
 if (!OpenCentralGlobals.escenario)
