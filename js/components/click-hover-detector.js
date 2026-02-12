@@ -4,7 +4,7 @@ AFRAME.registerComponent("click-hover-detector", {
 
   init: function () {
     const sceneEl = this.el.sceneEl;
-    const { escenario } = OpenCentralGlobals;
+    const { escenario, interactiveMeshes: globalMeshes } = OpenCentralGlobals;
 
     if (!escenario || !sceneEl) {
       console.error("❌ OpenCentralGlobals no cargado correctamente");
@@ -35,6 +35,7 @@ AFRAME.registerComponent("click-hover-detector", {
         child.userData.interactable = true; // ← añadimos clase interactable
         child.originalMaterial = child.material.clone(); // backup del material para resetMaterial
         interactiveMeshes.push(child);
+        globalMeshes.push(child); // ← Registramos mesh también en OpenCentralGlobals
       });
 
       if (interactiveMeshes.length === 0)
@@ -42,7 +43,7 @@ AFRAME.registerComponent("click-hover-detector", {
       else
         console.log(
           `🎨 Meshes detectados (${interactiveMeshes.length}):`,
-          interactiveMeshes.map((m) => m.name)
+          interactiveMeshes.map((m) => m.name),
         );
 
       modelLoaded = true;
@@ -56,7 +57,6 @@ AFRAME.registerComponent("click-hover-detector", {
     const CLICK_THRESHOLD = 5;
     const raycaster = new THREE.Raycaster();
 
-    // Hover / raycast
     const pointerRaycast = (event) => {
       if (!sceneEl.camera || !modelLoaded) return;
 
@@ -97,7 +97,7 @@ AFRAME.registerComponent("click-hover-detector", {
       const mesh = hit?.object || null;
 
       if (mesh) handleClick(mesh);
-      console.log(`🔴 CLICK REAL: ${ mesh.name }`);
+      console.log(`🔴 CLICK REAL: ${mesh.name}`);
     };
 
     const attachPointerEvents = () => {

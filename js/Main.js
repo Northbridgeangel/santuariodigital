@@ -1,7 +1,8 @@
 // main.js — crea y llena el namespace
 window.OpenCentralGlobals = {
-  escenario: document.querySelector("#escenario"),  
+  escenario: document.querySelector("#escenario"),
   sceneEl: document.querySelector("a-scene"),
+  interactiveMeshes: [], // ← Placeholder para registrar todos los meshes interactivos
 };
 
 if (!OpenCentralGlobals.escenario)
@@ -10,6 +11,7 @@ else console.log("✅ Escenario global disponible");
 
 if (!OpenCentralGlobals.sceneEl) console.error("❌ No se encontró <a-scene>");
 else console.log("✅ Scene global disponible");
+
 
 // ==========================
 // hud-pegado a la cámara
@@ -77,13 +79,9 @@ AFRAME.registerComponent("hud-autoscale", {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-      const factor = Math.min(
-        w / this.data.baseWidth,
-        h / this.data.baseHeight
-      );
-      const s = this.data.baseScale * factor;
-      this.targetScale.set(s, s, s);
-
+    const factor = Math.min(w / this.data.baseWidth, h / this.data.baseHeight);
+    const s = this.data.baseScale * factor;
+    this.targetScale.set(s, s, s);
   },
 
   tick: function () {
@@ -94,7 +92,6 @@ AFRAME.registerComponent("hud-autoscale", {
     window.removeEventListener("resize", this.updateScale);
   },
 });
-
 
 // ==========================
 // hud-child-position-scale (POSICIÓN DINÁMICA DEL HIJO DEL HUD)
@@ -146,7 +143,6 @@ AFRAME.registerComponent("hud-child-position-scale", {
     window.removeEventListener("resize", this.updatePosition);
   },
 });
-
 
 AFRAME.registerComponent("vr-detector", {
   init: function () {
