@@ -74,19 +74,24 @@ Nota del funcionamiento: Ignorar los warnings de framebuffer si la escena se ve 
 ## 📁 Estructura de archivos
 /santuariodigital/
 ├─ assets/
-│  ├─ escenario.glb              # Modelo 3D principal del entorno
-│  └─ environment.hdr            # Mapa HDR para iluminación ambiental
+│  ├─ escenario.glb                # Modelo 3D principal del entorno
+│  └─ environment.hdr              # Mapa HDR para iluminación ambiental
 ├─ js/
-│  ├─ Main.js                    # Script principal de inicialización
-│  └─ components/                # Componentes personalizados de A-Frame
-│     ├─ DetectorClickHover.js   # Detección de eventos click y hover
-│     ├─ Embellecedor.js         # Ajustes visuales y embellecimiento
-│     └─ handleClick.js          # Lógica de interacción al hacer click
-│  └─ controls/                  # Controles de movimiento según dispositivo
-│     ├─ desktopControl.js       # Movimiento desktop scroll-fly-smooth y smooth-wasd
-│     ├─ mobileControl.js        # Movimiento móvil swipe y touch-hold
-│     └─ fly-mode.js             # Componentes check-player y check-door
-└─ index.html                    # Escena principal de A-Frame
+│  ├─ Main.js                      # Script principal de inicialización: boostrap, main sis y config
+│  ├─ debug-overlay.js             # Script para facilitar debug multidispositivo
+│  └─ components/                  # Componentes personalizados de A-Frame
+│     ├─ click-hover-handle.js     # Lógica de interacción al hacer click
+│     ├─ Embellecedor.js           # Ajustes visuales y embellecimiento
+│     └─ mirrormaterial.js         # Script que añade el material espejo 
+│  └─ controls/                    # Controles de navegación multidispositivo
+│     ├─ desktopControl.js         # Navegación desktop scroll-fly-smooth y smooth-wasd
+│     ├─ mobileControl.js          # Navegación móvil swipe y touch-hold
+│     ├─ vr-controls.js            # Navegación en vr con el set metaquest
+│     └─ fly-mode.js               # Navegación vertical, check-player/check-door. Cliente de Doorsystem.
+│  └─ systems/                     # Sistemas globales de escena
+│     ├─ InteractionSystem.js      # Sistema sensor de mallas y eventos click-hover
+│     └─ DoorSystem.js             # Sistema de gestión de puertas
+└─ index.html                      # Escena principal de A-Frame
 
 ---
 

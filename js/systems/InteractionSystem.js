@@ -47,6 +47,13 @@ AFRAME.registerSystem("InteractionSystem", {
         );
 
       modelLoaded = true;
+
+      // 🔥 Emitimos evento global de inicialización
+      sceneEl.emit("open-globals-ready", {
+        meshes: globalMeshes,
+      });
+
+      console.log("🚀 OpenCentralGlobals listo — evento emitido");
     });
 
     // -------------------------------------------------

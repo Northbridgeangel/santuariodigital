@@ -2,7 +2,7 @@
 window.OpenCentralGlobals = {
   escenario: document.querySelector("#escenario"),
   sceneEl: document.querySelector("a-scene"),
-  interactiveMeshes: [], // ← Placeholder siempre accesible para registrar todos los meshes interactivos
+  interactiveMeshes: [], // ← Placeholder siempre accesible, almacena meshes interactivos (IS Emisión de modelo -> OG almacen -> Otros consumidores)
 };
 
 if (!OpenCentralGlobals.escenario)
@@ -11,7 +11,6 @@ else console.log("✅ Escenario global disponible");
 
 if (!OpenCentralGlobals.sceneEl) console.error("❌ No se encontró <a-scene>");
 else console.log("✅ Scene global disponible");
-
 
 // ==========================
 // hud-pegado a la cámara

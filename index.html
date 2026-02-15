@@ -23,11 +23,11 @@
     <script src="./js/controls/mobileControl.js"></script>
     <script src="./js/controls/vr-controls.js"></script>
     <script src="./js/controls/fly-mode.js"></script>
+    <script src="./js/components/check-player.js"></script>
     <script src="./js/components/mirrormaterial.js"></script>
-    <script src="./js/components/click-hover-handle.js.js"></script>
+    <script src="./js/components/click-hover-handle.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
     <script src="./js/systems/InteractionSystem.js"></script>
-    <script src="./js/systems/DoorSystem.js"></script>
     <script src="./js/debug-overlay.js"></script>
 
     <script>
@@ -81,7 +81,7 @@
             opacity:0.8;">
         Debug
     </div>
-    
+
     <div id="debug-console" style="
             display:none;
             position:fixed;
@@ -97,10 +97,10 @@
             z-index:999998;
             opacity:0.85;
             border-left:2px solid #0f0;">
-    
+
         <!-- Área de logs -->
         <div id="debug-log"></div>
-    
+
         <!-- Línea de comandos -->
         <input id="debug-input" type="text" placeholder="Escribe un comando JS y pulsa Enter" style="
                 width:100%;
@@ -130,34 +130,37 @@
         <!-- RIG que agrupa movimiento + cámara -->
         <a-entity id="rig" vr-scale-rig position="0 0 0" check-player touch-hold
             scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
-        
+
             <!-- Cámara con todos tus controles -->
-            <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down swipe-left-right
-                position="0 0.25 0">
+            <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
+                swipe-left-right position="0 0.25 0">
             </a-entity>
-        
+
             <!-- CONTROLADOR IZQUIERDO -->
-            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left" hand-tracking-controls="hand: left" raycaster="objects: .interactable; far: 20">
-                <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
-                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
-                    material="color: white; shader: flat; opacity: 0.8" visible="false">
-                </a-entity>
-            </a-entity>
-            
-            <!-- CONTROLADOR DERECHO -->
-            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right" hand-tracking-controls="hand: right" raycaster="objects: .interactable; far: 20">
+            <a-entity id="controller-left" role="vr-controller" laser-controls="hand: left"
+                hand-tracking-controls="hand: left" raycaster="objects: .interactable; far: 20">
                 <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
                     geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
                     material="color: white; shader: flat; opacity: 0.8" visible="false">
                 </a-entity>
             </a-entity>
 
-        
+            <!-- CONTROLADOR DERECHO -->
+            <a-entity id="controller-right" role="vr-controller" laser-controls="hand: right"
+                hand-tracking-controls="hand: right" raycaster="objects: .interactable; far: 20">
+                <a-entity class="controller-cursor" cursor="fuse: false; rayOrigin: controller"
+                    geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
+                    material="color: white; shader: flat; opacity: 0.8" visible="false">
+                </a-entity>
+            </a-entity>
+
+
         </a-entity>
 
 
         <!-- GLB cargado como escenario estático -->
-        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario" click-hover-detector="maxDistance: 5" check-door></a-entity>
+        <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
+            click-hover-detector="maxDistance: 5" check-door></a-entity>
 
         <!-- Indicador moviendo: FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
