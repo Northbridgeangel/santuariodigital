@@ -8,7 +8,7 @@ AFRAME.registerComponent("vr-controls", {
   },
 
   init: function () {
-    console.log("🟢 Componente Test Joystick Quest inicializado");
+    //console.log("🟢 Componente Test Joystick Quest inicializado");
 
     this.xrSessionActive = false;
 

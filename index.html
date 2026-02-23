@@ -28,6 +28,7 @@
     <script src="./js/components/click-hover-handle.js"></script>
     <script src="./js/components/Embellecedor.js"></script>
     <script src="./js/systems/InteractionSystem.js"></script>
+    <script src="./js/systems/DoorSystem.js"></script>
     <script src="./js/debug-overlay.js"></script>
 
     <script>
@@ -162,12 +163,31 @@
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             click-hover-detector="maxDistance: 5" check-door></a-entity>
 
-        <!-- Indicador moviendo: FlightMode / Wings -->
+        <!-- Indicador moviendo: Checkdoor-FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
             <a-entity id="hud-wings-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
                 material="color: white; side: double; transparent: true; opacity: 0.5" rotation="0 180 0"
                 position="0 0 0.01"
+                animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
+            </a-entity>
+        </a-entity>
+
+        <!-- Indicador moviendo: Checkdoor-FlightMode / Stars -->
+        <a-entity id="hud-stars" position="1.315 0.98 1.912">
+            <a-entity id="hud-stars-text"
+                text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
+                material="color: yellow; side: double; transparent: true; opacity: 0.5" rotation="0 270 0"
+                position="0 0 0.01"
+                animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
+            </a-entity>
+        </a-entity>
+
+        <!-- Indicador moviendo: Checkdoor-FlightMode / Cube -->
+        <a-entity id="hud-cube" position="-0.55 0.98 2.1">
+            <a-entity id="hud-cube-text"
+                text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
+                material="color: pink; side: double; transparent: true; opacity: 0.5" rotation="0 90 0" position="0 0 0.01"
                 animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
             </a-entity>
         </a-entity>

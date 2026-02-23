@@ -1,20 +1,289 @@
 // js/systems/DoorSystem.js
-AFRAME.registerSystem("door-system", {
-  init: function () {
-    this.logged = false; // marca para que solo loguee una vez
+
+// ==========================
+// check-door (multi collider)
+// Portales: usan intersección entre Box3 y disparan HUD / fly mode.
+// Sensores de puerta (Btn-pta): se abre/cierra la puerta según proximidad del jugador.
+// ==========================
+AFRAME.registerComponent("check-door", {
+  schema: {
+    targetRig: { type: "selector", default: "#rig" },
   },
 
-  tick: function () {
-    if (this.logged) return; // ya logueamos, no hacemos nada
+  init: function () {
+    // ==========================
+    // 1️⃣ Referencia al jugador
+    // ==========================
+    this.rig =
+      this.data.targetRig.querySelector("a-entity[camera]") ||
+      this.data.targetRig;
 
-    const meshes = window.OpenCentralGlobals?.interactiveMeshes;
-    if (meshes && meshes.length) {
-      const doorMeshes = meshes.filter((m) => m.name.startsWith("Puerta"));
-      console.log(
-        "🚪 DoorSystem — Puertas detectadas:",
-        doorMeshes.map((m) => m.name),
-      );
-      this.logged = true; // ¡importante! para que no vuelva a loguear
+    this.colliders = [];
+    this.playerComp = null;
+
+    // ==========================
+    // 2️⃣ HUD Wings (solo portales)
+    // ==========================
+    this.hudWings = document.querySelector("#hud-wings");
+    this.hudText = document.querySelector("#hud-wings-text");
+
+    // ==========================
+    // 3️⃣ Esperar core listo
+    // ==========================
+    window.OpenCentralGlobals.core.sceneEl.addEventListener(
+      "open-globals-ready",
+      () => this.setupColliders(),
+    );
+  },
+
+  // ==========================
+  // SETUP COLLIDERS
+  // ==========================
+  setupColliders: function () {
+    const core = window.OpenCentralGlobals.core;
+
+    this.playerComp = this.data.targetRig.components["check-player"];
+    if (!this.playerComp) {
+      console.warn("⚠️ check-player no encontrado en rig");
+      return;
     }
+
+    core.interactiveMeshes.forEach((mesh) => {
+      let type = null;
+      if (mesh.name.startsWith("Portal")) type = "portal";
+      if (mesh.name.startsWith("Btn-pta")) type = "sensor";
+
+      const box =
+        type === "portal" ? new THREE.Box3().setFromObject(mesh) : null;
+
+      // ==========================
+      // Guardar posición inicial puertas
+      // ==========================
+      if (mesh.name.startsWith("Puerta")) {
+        if (!mesh.initialPosition) {
+          mesh.initialPosition = mesh.position.clone();
+          mesh.targetPosition = mesh.initialPosition.clone();
+        }
+      }
+
+      // ==========================
+      // CONFIGURAR SENSOR → PUERTA
+      // ==========================
+      if (type === "sensor") {
+        const door = this.findNearestDoor(mesh);
+
+        if (door) {
+          mesh.controlledDoor = door;
+
+          // 🔹 Calcular ancho REAL una sola vez (LOCAL)
+          if (!door.geometry.boundingBox) {
+            door.geometry.computeBoundingBox();
+          }
+
+          const localBox = door.geometry.boundingBox.clone();
+          const size = new THREE.Vector3();
+          localBox.getSize(size);
+
+          const horizontalX = size.x;
+          const horizontalZ = size.z;
+
+          let ejeAncho = horizontalX > horizontalZ ? "x" : "z"; //comprobación del valor y toggle del eje
+          let anchoLocal = Math.max(horizontalX, horizontalZ); //Math->Resolve real numbers  of x and z?
+
+          // 🔹 Guardamos datos en la puerta (no recalcular cada tick)
+          door._doorData = {
+            ejeAncho,
+            anchoLocal,
+          };
+
+          console.log(`🚪 Puerta vinculada: ${door.name}`);
+          console.log("📏 LOCAL SIZE:", size);
+          console.log("📐 Eje ancho:", ejeAncho);
+          console.log("📐 Ancho local:", anchoLocal);
+        }
+      }
+
+      this.colliders.push({
+        name: mesh.name,
+        mesh,
+        box,
+        type,
+        triggered: false,
+        lastIntersection: false,
+      });
+    });
+
+    console.log(
+      "🚪 check-door inicializado | Colliders:",
+      this.colliders.map((c) => c.name),
+    );
+
+    this.initializeHUD();
+  },
+
+  // ==========================
+  // HUD INIT
+  // ==========================
+  initializeHUD: function () {
+    if (!this.hudWings || !this.hudText) return;
+    this.updateHUD("OFF");
+  },
+
+  updateHUD: function (state) {
+    if (!this.hudWings || !this.hudText) return;
+
+    this.hudWings.object3D.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.material =
+          state === "ON"
+            ? new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 1,
+                emissive: 0xffffff,
+                emissiveIntensity: 1,
+                side: THREE.DoubleSide,
+              })
+            : new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+              });
+
+        obj.material.needsUpdate = true;
+      }
+    });
+
+    this.hudText.setAttribute("text-geometry", "value", state);
+  },
+
+  // ==========================
+  // BUSCAR PUERTA MÁS CERCANA
+  // ==========================
+  findNearestDoor: function (sensorMesh) {
+    const core = window.OpenCentralGlobals.core;
+
+    let nearestDoor = null;
+    let minDistance = Infinity;
+
+    const sensorWorldPos = new THREE.Vector3();
+    sensorMesh.getWorldPosition(sensorWorldPos);
+
+    core.interactiveMeshes.forEach((mesh) => {
+      if (mesh.name.startsWith("Puerta")) {
+        const doorWorldPos = new THREE.Vector3();
+        mesh.getWorldPosition(doorWorldPos);
+
+        const distance = sensorWorldPos.distanceTo(doorWorldPos);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestDoor = mesh;
+        }
+      }
+    });
+
+    return nearestDoor;
+  },
+
+  // ==========================
+  // TICK
+  // ==========================
+  tick: function () {
+    if (!this.colliders.length || !this.playerComp) return;
+
+    const rigPos = new THREE.Vector3();
+    this.rig.object3D.getWorldPosition(rigPos);
+
+    const rigBox = new THREE.Box3().setFromCenterAndSize(
+      rigPos,
+      this.playerComp.playerSize,
+    );
+
+    const lerpFactor = 0.0025;
+
+    this.colliders.forEach((collider) => {
+      let isIntersecting = false;
+
+      // ==========================
+      // PORTALES
+      // ==========================
+      if (collider.type === "portal") {
+        if (!collider.box) return;
+
+        isIntersecting = rigBox.intersectsBox(collider.box);
+
+        if (isIntersecting && !collider.lastIntersection) {
+          collider.triggered = !collider.triggered;
+
+          if (collider.name === "Portal_blanco_collider") {
+            this.updateHUD(collider.triggered ? "ON" : "OFF");
+
+            const flyComp = this.el.sceneEl.components["fly-mode"];
+            if (flyComp) flyComp.toggleFlyMode();
+          }
+        }
+      }
+
+      // ==========================
+      // SENSORES
+      // ==========================
+      if (collider.type === "sensor") {
+        const sensorPos = new THREE.Vector3();
+        collider.mesh.getWorldPosition(sensorPos);
+
+        const dx = rigPos.x - sensorPos.x;
+        const dz = rigPos.z - sensorPos.z;
+        const radius = 0.28;
+
+        isIntersecting = Math.sqrt(dx * dx + dz * dz) < radius;
+
+        const door = collider.mesh.controlledDoor;
+        if (!door || !door._doorData) return;
+
+        if (isIntersecting && !collider.lastIntersection) {
+          console.log(`🟢 Sensor ${collider.name} → ABIERTO`);
+
+          const { ejeAncho, anchoLocal } = door._doorData; //eje que usa | cuanto mover
+
+          const worldRight = new THREE.Vector3(-1, 0, 0).applyQuaternion(
+            door.quaternion,
+          );
+
+          const worldForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+            door.quaternion,
+          );
+
+          const worldDirection = ejeAncho === "x" ? worldRight : worldForward;
+
+          let scaleFactor = 1;
+
+          if (ejeAncho === "x") {
+            scaleFactor = door.scale.x;
+          } else {
+            scaleFactor = door.scale.z;
+          }
+
+          const offset = worldDirection.multiplyScalar(
+            anchoLocal * scaleFactor,
+          );
+
+          door.targetPosition = door.initialPosition.clone().add(offset);
+
+          collider.triggered = true;
+        } else if (!isIntersecting && collider.lastIntersection) {
+          console.log(`🔴 Sensor ${collider.name} → CERRADO`);
+
+          door.targetPosition = door.initialPosition.clone();
+          collider.triggered = false;
+        }
+
+        if (door.position && door.targetPosition) {
+          door.position.lerp(door.targetPosition, lerpFactor);
+        }
+      }
+
+      collider.lastIntersection = isIntersecting;
+    });
   },
 });

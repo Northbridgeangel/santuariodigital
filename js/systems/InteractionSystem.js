@@ -4,10 +4,11 @@ AFRAME.registerSystem("InteractionSystem", {
 
   init: function () {
     const sceneEl = this.el.sceneEl;
-    const { escenario, interactiveMeshes: globalMeshes } = OpenCentralGlobals;
+    const { escenario, interactiveMeshes: globalMeshes } =
+      window.OpenCentralGlobals.core;
 
     if (!escenario || !sceneEl) {
-      console.error("❌ OpenCentralGlobals no cargado correctamente");
+      //console.error("❌ OpenCentralGlobals no cargado correctamente");
       return;
     }
 
@@ -21,13 +22,13 @@ AFRAME.registerSystem("InteractionSystem", {
       const modelRoot = escenario.getObject3D("mesh") || ev.detail.model;
       if (!modelRoot) return console.error("❌ No se encontró modelRoot");
 
-      console.log("✅ InteractionSystem activo — esperando interacciones.");
+      //console.log("✅ InteractionSystem activo — esperando interacciones.");
 
       modelRoot.traverse((child) => {
         if (!child.isMesh || child.name.startsWith("Escena")) return;
 
         if (/transparentfloor|floor|ground/i.test(child.name)) {
-          console.log(`🟡 Ignorando mesh del suelo: ${child.name}`);
+          //console.log(`🟡 Ignorando mesh del suelo: ${child.name}`);
           child.userData.clickable = false;
           return;
         }
@@ -53,7 +54,7 @@ AFRAME.registerSystem("InteractionSystem", {
         meshes: globalMeshes,
       });
 
-      console.log("🚀 OpenCentralGlobals listo — evento emitido");
+      //console.log("🚀 OpenCentralGlobals listo — evento emitido");
     });
 
     // -------------------------------------------------

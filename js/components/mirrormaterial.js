@@ -28,7 +28,7 @@ AFRAME.registerComponent("mirror-material", {
               envMapIntensity: 1.5,
             });
 
-            console.log("✅ Material espejo aplicado");
+            //console.log("✅ Material espejo aplicado");
           }
 
           // ✨ CRISTAL DORADO ESPEJADO
@@ -46,11 +46,11 @@ AFRAME.registerComponent("mirror-material", {
               opacity: 0.92,
             });
 
-            console.log("✨ Cristal dorado aplicado");
+            //console.log("✨ Cristal dorado aplicado");
           }
         });
 
-        console.log("✅ Sistema de materiales cargado");
+        //console.log("✅ Componente de materiales cargado");
       });
     });
   },

@@ -1,15 +1,63 @@
 // main.js — crea y llena el namespace
 window.OpenCentralGlobals = {
-  escenario: document.querySelector("#escenario"),
-  sceneEl: document.querySelector("a-scene"),
-  interactiveMeshes: [], // ← Placeholder siempre accesible, almacena meshes interactivos (IS Emisión de modelo -> OG almacen -> Otros consumidores)
+  //OpenCentralGlobals → almacén entre componentes y sistemas emitido en InteractionSystem.js
+  // ========================
+  // CORE
+  // ========================
+  core: {
+    escenario: document.querySelector("#escenario"),
+    sceneEl: document.querySelector("a-scene"),
+    interactiveMeshes: [], // Meshes interactivos → almacenamiento global
+  },
+
+  // ========================
+  // COLLISION SYSTEM
+  // ========================
+  collision: {
+    activeMesh: null,
+    lastIntersection: null,
+
+    intersectionState: {
+      isIntersecting: false,
+      justEntered: false,
+      justExited: false,
+      sustained: false,
+    },
+
+    colliderVolume: null,
+    collisionDirection: null,
+    lastSafePosition: null,
+  },
+
+  // ========================
+  // PLAYER SYSTEM
+  // ========================
+  player: {
+    playerComponent: null,
+    elevationSolid: 0, // para detectar si el jugador está en el suelo o en el aire
+
+    // referencia base del collider del jugador
+    baseColliderName: "Portal_blanco_collider",
+    baseColliderVolume: null,
+  },
+
+  // ========================
+  // PHYSICS POLICY
+  // ========================
+  physics: {
+    rigidBodyPolicy: "PASS", // "PASS" | "STOP" | "SLIDE"
+    lockPosition: false,
+  },
 };
 
-if (!OpenCentralGlobals.escenario)
-  console.error("❌ No se encontró #escenario");
+// Alias corto opcional
+const OG = window.OpenCentralGlobals;
+
+// Comprobaciones básicas
+if (!OG.core.escenario) console.error("❌ No se encontró #escenario");
 else console.log("✅ Escenario global disponible");
 
-if (!OpenCentralGlobals.sceneEl) console.error("❌ No se encontró <a-scene>");
+if (!OG.core.sceneEl) console.error("❌ No se encontró <a-scene>");
 else console.log("✅ Scene global disponible");
 
 // ==========================
