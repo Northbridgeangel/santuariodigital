@@ -151,47 +151,44 @@ AFRAME.registerComponent("pointer-draw", {
     });
 
     // ================================
-    // D5. VR: detectar estado de sesión XR
-    // ================================
-    this.xrSessionActive = false;
-
-    sceneEl.addEventListener("enter-vr", () => {
-      this.xrSessionActive = !!sceneEl.xrSession;
-    });
-
-    // ================================
-    // D6. VR: Si trigger presionado, pinta desde posición del controlador 
-    // y desactiva raycaster del controlador para que no interfiera con objetos
+    // D5 + D6. VR: Controladores y dibujo con trigger
     // ================================
 
+    // Tick VR: dibujar desde trigger y desactivar raycaster mientras se dibuja
     this.tick = () => {
-      if (!sceneEl.is("vr-mode") || !this.xrSessionActive) return;
+      // Solo si estamos en VR y tenemos estado de botones
+      if (!sceneEl.is("vr-mode") || !sceneEl.VRButtonState) return;
 
       ["left", "right"].forEach((hand) => {
         const controllerEl = document.querySelector(`#controller-${hand}`);
-        if (!controllerEl) return;
+        if (!controllerEl) return; // ignorar si no existe
 
         const comp = controllerEl.components.raycaster;
-        if (!comp || !comp.raycaster) return;
+        if (!comp || !comp.raycaster) return; // ignorar si no tiene raycaster
 
-        // 🔹 Leemos estado real del trigger (botón 0)
+        // 🔹 Leemos estado del trigger (botón 0) desde vr-controls.js
         const VRHold = sceneEl.VRButtonState?.[hand]?.[0]?.VRHold;
-        this.isPointerDown = this.data.enabled && VRHold;
 
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        const pos3D = new THREE.Vector3();
+        // 🔹 Solo dibujamos si Creator Mode activo y trigger presionado
+        const drawActive = this.data.enabled && VRHold;
 
-        // 🔹 Si estamos dibujando, pintamos desde la posición del controlador
-        if (this.isPointerDown) {
+        if (drawActive) {
+          // 🔹 Calculamos el punto 3D justo delante del trigger
           const origin = controllerEl.object3D.getWorldPosition(
             new THREE.Vector3(),
           );
-          this.addDrawPoint(origin);
+          const dir = controllerEl.object3D.getWorldDirection(
+            new THREE.Vector3(),
+          );
+          const pos3D = origin.clone().add(dir.multiplyScalar(0.1)); // 10cm delante
 
-          // 🔹 Desactivamos temporalmente el raycaster del controlador
+          // 🔹 Añadimos el punto al DrawGroup
+          this.addDrawPoint(pos3D);
+
+          // 🔹 Desactivamos temporalmente el raycaster para que no interfiera con objetos
           comp.el.components.raycaster.data.enabled = false;
         } else {
-          // 🔹 Volvemos a activar el raycaster si no dibujamos
+          // 🔹 Reactivamos raycaster si no dibujamos
           comp.el.components.raycaster.data.enabled = true;
         }
       });
