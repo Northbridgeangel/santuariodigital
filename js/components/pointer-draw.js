@@ -163,47 +163,27 @@ AFRAME.registerComponent("pointer-draw", {
 
         const comp = controllerEl.components.raycaster;
         if (!comp || !comp.raycaster) return;
-
         const ray = comp.raycaster;
-        ray.far = 10; // distancia máxima de dibujo
 
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
         const pos3D = new THREE.Vector3();
+
+        // ✅ Leemos estado real del trigger desde vr-controls.js
+        const VRHold = sceneEl.VRButtonState?.[hand]?.[0]?.VRHold;
+        this.isPointerDown = this.data.enabled && VRHold;
 
         if (this.isPointerDown) {
           ray.ray.intersectPlane(plane, pos3D);
           if (pos3D) this.addDrawPoint(pos3D);
         }
 
+        // Actualizar mesh bajo el puntero (interactivo)
         const hit = ray.intersectObjects(
           window.OpenCentralGlobals.core.interactiveMeshes,
-          true,
+          true
         )[0];
         sceneEl.selectedMeshUnderPointer = hit?.object || null;
       });
     };
-
-    ["left", "right"].forEach((hand) => {
-      const controllerEl = document.querySelector(`#controller-${hand}`);
-      if (!controllerEl) return;
-
-      controllerEl.addEventListener("triggerdown", () => {
-        if (!this.data.enabled) return;
-        this.isPointerDown = true;
-      });
-
-      controllerEl.addEventListener("triggerup", () => {
-        this.isPointerDown = false;
-      });
-
-      controllerEl.addEventListener("triggerhold", () => {
-        if (!this.data.enabled) return;
-        this.isPointerDown = true;
-      });
-
-      controllerEl.addEventListener("triggerunhold", () => {
-        this.isPointerDown = false;
-      });
-    });
   },
 });
