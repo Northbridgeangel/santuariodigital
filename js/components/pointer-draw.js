@@ -150,9 +150,8 @@ AFRAME.registerComponent("pointer-draw", {
       once: true,
     });
 
-
     // ================================
-    // D5/D6. VR: Controladores
+    // D5/D6. VR: tick de dibujo y trigger real
     // ================================
     this.tick = () => {
       if (!sceneEl.is("vr-mode")) return;
@@ -163,26 +162,35 @@ AFRAME.registerComponent("pointer-draw", {
 
         const comp = controllerEl.components.raycaster;
         if (!comp || !comp.raycaster) return;
+
         const ray = comp.raycaster;
+        ray.far = 10; // límite de distancia para dibujo
 
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
         const pos3D = new THREE.Vector3();
 
-        // ✅ Leemos estado real del trigger desde vr-controls.js
+        // 🔹 D6: Leer estado real del trigger (botón 0) desde vr-controls.js
         const VRHold = sceneEl.VRButtonState?.[hand]?.[0]?.VRHold;
         this.isPointerDown = this.data.enabled && VRHold;
 
+        // 🔹 Si estamos dibujando:
         if (this.isPointerDown) {
+          ray.enabled = false; // desactivamos raycaster de esta mano
+          ray.el.object3D.visible = false; // ocultamos visualmente el rayo
+
           ray.ray.intersectPlane(plane, pos3D);
           if (pos3D) this.addDrawPoint(pos3D);
-        }
+        } else {
+          // 🔹 Hover normal: raycaster activo
+          ray.enabled = true;
+          ray.el.object3D.visible = true;
 
-        // Actualizar mesh bajo el puntero (interactivo)
-        const hit = ray.intersectObjects(
-          window.OpenCentralGlobals.core.interactiveMeshes,
-          true
-        )[0];
-        sceneEl.selectedMeshUnderPointer = hit?.object || null;
+          const hit = ray.intersectObjects(
+            window.OpenCentralGlobals.core.interactiveMeshes,
+            true,
+          )[0];
+          sceneEl.selectedMeshUnderPointer = hit?.object || null;
+        }
       });
     };
   },
