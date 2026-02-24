@@ -151,10 +151,21 @@ AFRAME.registerComponent("pointer-draw", {
     });
 
     // ================================
-    // D5/D6. VR: tick de dibujo y trigger real
+    // D5. VR: detectar estado de sesión XR
     // ================================
+    this.xrSessionActive = false;
+
+    sceneEl.addEventListener("enter-vr", () => {
+      this.xrSessionActive = !!sceneEl.xrSession;
+    });
+
+    // ================================
+    // D6. VR: Si trigger presionado, pinta desde posición del controlador 
+    // y desactiva raycaster del controlador para que no interfiera con objetos
+    // ================================
+
     this.tick = () => {
-      if (!sceneEl.is("vr-mode")) return;
+      if (!sceneEl.is("vr-mode") || !this.xrSessionActive) return;
 
       ["left", "right"].forEach((hand) => {
         const controllerEl = document.querySelector(`#controller-${hand}`);
@@ -163,33 +174,25 @@ AFRAME.registerComponent("pointer-draw", {
         const comp = controllerEl.components.raycaster;
         if (!comp || !comp.raycaster) return;
 
-        const ray = comp.raycaster;
-        ray.far = 10; // límite de distancia para dibujo
+        // 🔹 Leemos estado real del trigger (botón 0)
+        const VRHold = sceneEl.VRButtonState?.[hand]?.[0]?.VRHold;
+        this.isPointerDown = this.data.enabled && VRHold;
 
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
         const pos3D = new THREE.Vector3();
 
-        // 🔹 D6: Leer estado real del trigger (botón 0) desde vr-controls.js
-        const VRHold = sceneEl.VRButtonState?.[hand]?.[0]?.VRHold;
-        this.isPointerDown = this.data.enabled && VRHold;
-
-        // 🔹 Si estamos dibujando:
+        // 🔹 Si estamos dibujando, pintamos desde la posición del controlador
         if (this.isPointerDown) {
-          ray.enabled = false; // desactivamos raycaster de esta mano
-          ray.el.object3D.visible = false; // ocultamos visualmente el rayo
+          const origin = controllerEl.object3D.getWorldPosition(
+            new THREE.Vector3(),
+          );
+          this.addDrawPoint(origin);
 
-          ray.ray.intersectPlane(plane, pos3D);
-          if (pos3D) this.addDrawPoint(pos3D);
+          // 🔹 Desactivamos temporalmente el raycaster del controlador
+          comp.el.components.raycaster.data.enabled = false;
         } else {
-          // 🔹 Hover normal: raycaster activo
-          ray.enabled = true;
-          ray.el.object3D.visible = true;
-
-          const hit = ray.intersectObjects(
-            window.OpenCentralGlobals.core.interactiveMeshes,
-            true,
-          )[0];
-          sceneEl.selectedMeshUnderPointer = hit?.object || null;
+          // 🔹 Volvemos a activar el raycaster si no dibujamos
+          comp.el.components.raycaster.data.enabled = true;
         }
       });
     };
