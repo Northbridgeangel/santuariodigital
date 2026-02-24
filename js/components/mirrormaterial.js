@@ -18,7 +18,8 @@ AFRAME.registerComponent("mirror-material", {
         mesh.traverse((child) => {
           if (!child.isMesh || !child.material) return;
 
-          // 🪞 ESPEJO (tu material original)
+          
+         // 🪞 ESPEJO (tu material original)
           if (child.material.name === "Espejo") {
             child.material = new THREE.MeshStandardMaterial({
               color: 0xffffff,
@@ -29,8 +30,10 @@ AFRAME.registerComponent("mirror-material", {
             });
 
             //console.log("✅ Material espejo aplicado");
-          }
 
+           
+          }
+          
           // ✨ CRISTAL DORADO ESPEJADO
           if (child.material.name === "Cristal dorado") {
             child.material = new THREE.MeshPhysicalMaterial({
