@@ -105,6 +105,7 @@ AFRAME.registerSystem("InteractionSystem", {
       const mesh = hit?.object || null;
 
       if (mesh) handleClick(mesh);
+      sceneEl.emit("mesh-clicked", { mesh });
       console.log(`🔴 CLICK REAL: ${mesh.name}`);
     };
 

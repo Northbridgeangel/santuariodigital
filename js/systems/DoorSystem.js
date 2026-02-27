@@ -226,7 +226,7 @@ AFRAME.registerComponent("check-door", {
       }
 
       // ==========================
-      // SENSORES
+      // SENSORES: se activan si intersectan o fueron clickados
       // ==========================
       if (collider.type === "sensor") {
         const sensorPos = new THREE.Vector3();
@@ -241,41 +241,48 @@ AFRAME.registerComponent("check-door", {
         const door = collider.mesh.controlledDoor;
         if (!door || !door._doorData) return;
 
-        if (isIntersecting && !collider.lastIntersection) {
-          console.log(`🟢 Sensor ${collider.name} → ABIERTO`);
+        // 🔹 D1. Sensor activo si intersecta o fue clickado
+        const sensorActive = isIntersecting || selectedMesh === collider.mesh;
 
-          const { ejeAncho, anchoLocal } = door._doorData; //eje que usa | cuanto mover
-
-          const worldRight = new THREE.Vector3(-1, 0, 0).applyQuaternion(
-            door.quaternion,
-          );
-
-          const worldForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
-            door.quaternion,
-          );
-
-          const worldDirection = ejeAncho === "x" ? worldRight : worldForward;
-
-          let scaleFactor = 1;
-
-          if (ejeAncho === "x") {
-            scaleFactor = door.scale.x;
+        if (sensorActive && !collider.lastIntersection) {
+          if (selectedMesh === collider.mesh && collider.triggered) {
+            // D2. Click en sensor y puerta abierta → cerrar
+            door.targetPosition = door.initialPosition.clone();
+            collider.triggered = false;
+            console.log(`Sensor ${collider.name} clickeado → CERRANDO puerta`);
           } else {
-            scaleFactor = door.scale.z;
+            // Abrir puerta
+            const { ejeAncho, anchoLocal } = door._doorData;
+
+            const worldRight = new THREE.Vector3(-1, 0, 0).applyQuaternion(
+              door.quaternion,
+            );
+            const worldForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+              door.quaternion,
+            );
+            const worldDirection = ejeAncho === "x" ? worldRight : worldForward;
+
+            let scaleFactor = ejeAncho === "x" ? door.scale.x : door.scale.z;
+            const offset = worldDirection.multiplyScalar(
+              anchoLocal * scaleFactor,
+            );
+
+            door.targetPosition = door.initialPosition.clone().add(offset);
+            collider.triggered = true;
+
+            console.log(`Sensor ${collider.name} → ABRIENDO puerta`);
           }
 
-          const offset = worldDirection.multiplyScalar(
-            anchoLocal * scaleFactor,
-          );
-
-          door.targetPosition = door.initialPosition.clone().add(offset);
-
-          collider.triggered = true;
-        } else if (!isIntersecting && collider.lastIntersection) {
-          console.log(`🔴 Sensor ${collider.name} → CERRADO`);
-
+          // Deseleccionamos sensor si fue clickado
+          if (selectedMesh === collider.mesh) {
+            resetMesh(collider.mesh);
+            selectedMesh = null;
+            console.log(`Sensor ${collider.name} deseleccionado tras click`);
+          }
+        } else if (!sensorActive && collider.lastIntersection) {
           door.targetPosition = door.initialPosition.clone();
           collider.triggered = false;
+          console.log(`Sensor ${collider.name} → CERRADO`);
         }
 
         if (door.position && door.targetPosition) {

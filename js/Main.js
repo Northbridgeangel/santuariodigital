@@ -7,7 +7,7 @@ window.OpenCentralGlobals = {
   core: {
     escenario: document.querySelector("#escenario"),
     sceneEl: document.querySelector("a-scene"),
-    interactiveMeshes: [], // Meshes interactivos → almacenamiento global
+    interactiveMeshes: [], // Meshes interactivos emitidos en interactivesystem → almacenamiento global
   },
 
   // ========================
