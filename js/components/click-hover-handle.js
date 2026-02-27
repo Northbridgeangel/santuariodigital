@@ -3,28 +3,26 @@ let selectedMesh = null; // mesh actualmente activo
 let hoveredMesh = null; // mesh actualmente hovered
 
 function handleClick(mesh) {
-  // Caso 1: el mesh clicado ya está seleccionado
+  // 🔹 Si ya había un mesh seleccionado distinto, lo reseteamos
+  if (selectedMesh && selectedMesh !== mesh) {
+    resetMesh(selectedMesh);
+    console.log(`Mesh ${selectedMesh.name} deseleccionado automáticamente`);
+    selectedMesh = null;
+  }
+
+  // 🔹 Si clicamos el mismo mesh, lo deseleccionamos
   if (selectedMesh === mesh) {
-    resetMesh(mesh); // deseleccionamos
+    resetMesh(mesh);
     selectedMesh = null;
     console.log(`Mesh ${mesh.name} deseleccionado`);
     return;
   }
 
-  // Caso 2: otro mesh ya seleccionado
-  if (selectedMesh && selectedMesh !== mesh) {
-    console.log(
-      `⚠️ Otro mesh (${selectedMesh.name}) está activo, no se puede clicar hasta desactivarlo.`
-    );
-    return;
-  }
-
-  // Caso 3: ningún mesh seleccionado
+  // 🔹 Seleccionamos el mesh clicado
   selectedMesh = mesh;
   resaltarMesh(mesh, "click"); // aplicamos resalte click (rojo)
   console.log(`Mesh ${mesh.name} seleccionado`);
 }
-
 
 function handleHover(mesh) {
   // Si hay algo seleccionado distinto, no hacemos hover
@@ -44,11 +42,10 @@ function handleHover(mesh) {
   }
 
   // 🔹 Aplicamos resalte hover SOLO si el mesh no estaba ya en hover
-  // Esto evita que el log y el resalte se repitan cada tick o pointermove
   if (hoveredMesh !== mesh) {
     resaltarMesh(mesh, "hover");
     hoveredMesh = mesh;
-    console.log(`🟢 HOVER: ${mesh.name} `);
+    console.log(`🟢 HOVER: ${mesh.name}`);
   }
 }
 
