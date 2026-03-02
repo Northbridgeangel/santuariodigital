@@ -18,7 +18,7 @@ AFRAME.registerSystem("creator-mode", {
     // FUNCIONES AUXILIARES
     // ==========================
     const setRayVisible = (visible) => {
-      ["left", "right"].forEach((hand) => {
+      ["right", "left"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
         if (!ctrl) return;
         const rayLine = ctrl.getObject3D("line");
@@ -211,22 +211,22 @@ AFRAME.registerSystem("creator-mode", {
         return;
 
       const drawSystem = sceneEl.components["pointer-draw"];
-      if (!drawSystem || !drawSystem.data.enabled) return;
+      if (!drawSystem) return;
 
       ["left", "right"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
-        if (!ctrl) return;
+        if (!ctrl || ctrl.hasDrawListener) return; // evita múltiples listeners (rendimiento)
 
-        const triggerPressed =
-          ctrl.components["vr-controls"]?.data?.pads?.[hand]?.buttonState?.[0]
-            ?.VRHold;
+        ctrl.hasDrawListener = true;
 
-        if (!triggerPressed) return;
+        ctrl.addEventListener("triggerdown", () => {
+          if (!drawSystem.data.enabled) return;
 
-        const pos = new THREE.Vector3();
-        ctrl.object3D.getWorldPosition(pos);
+          const pos = new THREE.Vector3();
+          ctrl.object3D.getWorldPosition(pos);
 
-        drawSystem.addDrawPoint(pos);
+          drawSystem.addDrawPoint(pos); // ya no crea geometría nueva cada vez (rendimiento)
+        });
       });
     };
   },
@@ -241,7 +241,7 @@ AFRAME.registerSystem("creator-mode", {
 });
 
 // ==========================
-// POINTER DRAW COMPONENT
+// POINTER DRAW COMPONENT OPTIMIZADO PARA VR
 // ==========================
 AFRAME.registerComponent("pointer-draw", {
   schema: { enabled: { type: "boolean", default: false } },
@@ -250,13 +250,23 @@ AFRAME.registerComponent("pointer-draw", {
     const sceneEl = this.el.sceneEl;
     const escenario = window.OpenCentralGlobals.core.escenario;
 
-    this.isPointerDown = false;
-    this.drawPoints = [];
-    this.drawLine = null;
+    // -------------------------
+    // ESTADO DE DIBUJO
+    // -------------------------
+    this.isPointerDown = false; // mouse / touch
+    this.drawPoints = []; // puntos acumulados
+    this.drawLine = null; // línea actual
     this.drawGroup = new THREE.Group();
     this.drawGroup.name = "DrawGroup";
 
+    // -------------------------
+    // FLAGS VR para trigger continuo
+    // -------------------------
+    this.handTriggerDown = { right: false, left: false }; // 🔹 nuevo: trackea trigger presionado
+
+    // -------------------------
     // Añadir DrawGroup al modelo
+    // -------------------------
     const addDrawGroup = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
@@ -265,28 +275,36 @@ AFRAME.registerComponent("pointer-draw", {
     if (escenario.getObject3D("mesh")) addDrawGroup();
     escenario.addEventListener("model-loaded", addDrawGroup);
 
-    // 🔹 Solo se activa/desactiva desde IconDraw-clicked
+    // -------------------------
+    // SOLO se activa/desactiva desde IconDraw-clicked
+    // -------------------------
     sceneEl.addEventListener("IconDraw-clicked", (evt) => {
       this.data.enabled = evt.detail.active;
       this.isPointerDown = evt.detail.active;
     });
 
-    // Función para añadir puntos
+    // -------------------------
+    // Función para añadir puntos al dibujo
+    // -------------------------
     this.addDrawPoint = (point) => {
       this.drawPoints.push(point.clone());
-      if (this.drawPoints.length < 2) return;
+      if (this.drawPoints.length < 2) return; // 🔹 No dibujar si menos de 2 puntos
 
       if (this.drawLine) this.drawGroup.remove(this.drawLine);
 
+      // 🔹 Dibujar línea continua usando BufferGeometry
       const geometry = new THREE.BufferGeometry().setFromPoints(
         this.drawPoints,
       );
+
       const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
       this.drawLine = new THREE.Line(geometry, material);
       this.drawGroup.add(this.drawLine);
     };
 
-    // Limpiar dibujo
+    // -------------------------
+    // Limpiar dibujo completo
+    // -------------------------
     window.clearDrawing = () => {
       this.drawPoints = [];
       if (this.drawLine) {
@@ -295,7 +313,9 @@ AFRAME.registerComponent("pointer-draw", {
       }
     };
 
-    // Eventos pointer
+    // -------------------------
+    // Eventos pointer (desktop / mobile)
+    // -------------------------
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
@@ -332,5 +352,43 @@ AFRAME.registerComponent("pointer-draw", {
       },
       { once: true },
     );
+
+    // -------------------------
+    // ESCUCHA TRIGGER VR (continuo)
+    // -------------------------
+    ["right", "left"].forEach((hand) => {
+      const controllerEl = document.querySelector(`#controller-${hand}`);
+      if (!controllerEl) return;
+
+      // 🔹 Trigger down: activa flag
+      controllerEl.addEventListener("triggerdown", () => {
+        this.handTriggerDown[hand] = true;
+      });
+
+      // 🔹 Trigger up: desactiva flag
+      controllerEl.addEventListener("triggerup", () => {
+        this.handTriggerDown[hand] = false;
+      });
+    });
+  },
+
+  tick: function () {
+    if (!this.data.enabled) return;
+
+    const sceneEl = this.el.sceneEl;
+
+    // 🔹 Prioridad mano derecha, luego izquierda
+    ["right", "left"].forEach((hand) => {
+      if (!this.handTriggerDown[hand]) return;
+
+      const controllerEl = document.querySelector(`#controller-${hand}`);
+      if (!controllerEl) return;
+
+      // 🔹 Obtener posición del controlador
+      const pos = new THREE.Vector3();
+      controllerEl.object3D.getWorldPosition(pos);
+
+      this.addDrawPoint(pos); // 🔹 añade punto continuo mientras trigger está presionado
+    });
   },
 });
