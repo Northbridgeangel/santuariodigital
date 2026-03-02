@@ -6,82 +6,229 @@ AFRAME.registerSystem("creator-mode", {
 
   init: function () {
     const escenario = window.OpenCentralGlobals.core.escenario;
+    const sceneEl = this.el.sceneEl;
+
     this.creatorModeActive = false;
     this.listeners = [];
     this.iconMeshes = null;
+    this.creatorMenu = []; // Todas las mallas del menú Creator
+    this.selectedIcon = null;
 
+    // ==========================
+    // FUNCIONES AUXILIARES
+    // ==========================
+    const setRayVisible = (visible) => {
+      ["left", "right"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl) return;
+        const rayLine = ctrl.getObject3D("line");
+        if (rayLine) rayLine.visible = visible;
+      });
+    };
+
+    const toggleMeshState = (meshes, active) => {
+      // Acepta un mesh individual o un array de meshes
+      const meshArray = Array.isArray(meshes) ? meshes : [meshes];
+
+      meshArray.forEach((mesh) => {
+        if (!mesh) return;
+
+        mesh.userData.active = active;
+
+        if (active) {
+          resaltarMesh(mesh, "click");
+
+          // 🔥 Sacarlo del sistema hover cuando pasa a activo persistente
+          if (window.HoverControl?.clearHoverFor) {
+            window.HoverControl.clearHoverFor(mesh);
+          }
+        } else {
+          resetMesh(mesh);
+        }
+      });
+    };
+
+    const updateCreatorUI = () => {
+      if (!this.iconMeshes || !this.creatorMenu) return;
+
+      const anyIconVisible = Object.values(this.iconMeshes).some((group) =>
+        group.some((m) => m && m.visible),
+      );
+
+      // Desactivar icono seleccionado si los iconos se ocultan
+      if (!anyIconVisible && this.selectedIcon) {
+        toggleMeshState(this.selectedIcon, false);
+
+        if (this.selectedIcon.some((m) => m.name === "Icon-Draw")) {
+          sceneEl.emit("IconDraw-clicked", {
+            active: false,
+            mesh: this.selectedIcon,
+          });
+        }
+
+        this.selectedIcon = null;
+        setRayVisible(true);
+      }
+
+      // Ajustar rayos según Icon-Draw activo
+      if (
+        this.selectedIcon &&
+        this.selectedIcon.some((m) => m.name === "Icon-Draw")
+      ) {
+        setRayVisible(false);
+      } else {
+        setRayVisible(true);
+      }
+    };
+
+    // ==========================
+    // SETUP ICONOS Y MENÚ CREATOR
+    // ==========================
     const setupIcons = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
 
+      // 🔹 Cada icono ahora es un array de mallas (aunque tenga una sola)
       this.iconMeshes = {
-        draw: modelRoot.getObjectByName("Icon-Draw"),
-        color: modelRoot.getObjectByName("Icon-Colorpicker"),
-        eraser: modelRoot.getObjectByName("Icon-Eraser"),
-        plane: modelRoot.getObjectByName("Icon-PlaneSelector"),
+        draw: [modelRoot.getObjectByName("Icon-Draw")],
+        color: [
+          modelRoot.getObjectByName("Icon-Colorpicker_Mesh"),
+          modelRoot.getObjectByName("Icon-Colorpicker_Mesh_1"),
+        ],
+        eraser: [modelRoot.getObjectByName("Icon-Eraser")],
+        plane: [modelRoot.getObjectByName("Icon-PlaneSelector")],
       };
 
-      // Inicialmente invisibles
-      Object.values(this.iconMeshes).forEach((mesh) => {
-        if (mesh) mesh.visible = false;
-        if (mesh) mesh.userData.active = false; // marca de toggle
+      // 🔹 Inicializar visibilidad y estados
+      Object.values(this.iconMeshes).forEach((group) => {
+        group.forEach((m) => {
+          if (!m) return;
+          m.visible = false; // 🔹 ahora invisible al principio
+          m.userData.active = false;
+          m.userData.interactable = true;
+          window.OpenCentralGlobals.core.interactiveMeshes.push(m);
+        });
       });
 
-      console.log("🎨 Iconos Creator Mode inicializados");
+      this.creatorMenu = Object.values(modelRoot.children).filter((m) =>
+        m.name.startsWith("Btn-creator-menú"),
+      );
+
+      //console.log("🎨 Iconos y menú Creator inicializados");
     };
 
     if (escenario.getObject3D("mesh")) setupIcons();
     escenario.addEventListener("model-loaded", setupIcons);
 
-    const sceneEl = this.el.sceneEl;
+    // ==========================
+    // EVENTO CLICK GLOBAL
+    // ==========================
     sceneEl.addEventListener("mesh-clicked", (evt) => {
       const mesh = evt.detail.mesh;
-
       if (!mesh) return;
 
-      if (mesh.name === "Btn-creator-menú_Mesh_1") {
-        // Solo activa/desactiva Creator Mode (iconos visibles/invisibles)
-        this.creatorModeActive = !this.creatorModeActive;
-        console.log(
-          `🎮 Creator Mode: ${this.creatorModeActive ? "ON" : "OFF"}`,
-        );
-        if (this.iconMeshes) {
-          Object.values(this.iconMeshes).forEach((m) => {
-            if (m) m.visible = this.creatorModeActive;
-          });
-        }
+      // --------------------------
+      // TOGGLE CREATOR MENU
+      // --------------------------
+      if (mesh.name.startsWith("Btn-creator-menú")) {
+        const isMenuActive = !this.creatorModeActive;
+        this.creatorModeActive = isMenuActive;
 
-        // 🔹 Si se apaga Creator Mode, desactiva pointer-draw
-        if (!this.creatorModeActive && this.iconMeshes?.draw) {
-          this.iconMeshes.draw.userData.active = false;
-          sceneEl.emit("IconDraw-clicked", {
-            active: false,
-            mesh: this.iconMeshes.draw,
+        // Mostrar/ocultar iconos
+        Object.values(this.iconMeshes).forEach((group) => {
+          group.forEach((m) => {
+            if (m) m.visible = isMenuActive;
           });
-        }
+        });
+
+        // Resaltar o resetear todas las mallas del menú
+        toggleMeshState(this.creatorMenu, isMenuActive);
+
+        updateCreatorUI();
+        return;
       }
 
-      // 🔹 Solo toggle para Icon-Draw
-      if (mesh.name === "Icon-Draw" && this.creatorModeActive) {
-        const isActive = !mesh.userData.active;
-        mesh.userData.active = isActive;
-        sceneEl.emit("IconDraw-clicked", { active: isActive, mesh });
-      }
-
-      // 🔹 Otros iconos solo desactivan pointer-draw
+      // --------------------------
+      // ICON-TOOL CLICK
+      // --------------------------
       if (
-        mesh.name !== "Icon-Draw" &&
-        mesh.name !== "Btn-creator-menú_Mesh_1"
+        mesh.name.startsWith("Icon") &&
+        Object.values(this.iconMeshes).some((group) =>
+          group.some((m) => m.visible),
+        )
       ) {
-        if (this.iconMeshes?.draw?.userData.active) {
-          this.iconMeshes.draw.userData.active = false;
+        // 🔹 Determinar grupo completo del icono clicado
+        let iconGroup = null;
+        for (const key in this.iconMeshes) {
+          if (this.iconMeshes[key].some((m) => m === mesh)) {
+            iconGroup = this.iconMeshes[key];
+            break;
+          }
+        }
+        if (!iconGroup) return;
+
+        // Desactivar icono anterior
+        if (this.selectedIcon && this.selectedIcon !== iconGroup) {
+          toggleMeshState(this.selectedIcon, false);
+
+          if (this.selectedIcon.some((m) => m.name === "Icon-Draw")) {
+            sceneEl.emit("IconDraw-clicked", {
+              active: false,
+              mesh: this.selectedIcon,
+            });
+          }
+        }
+
+        // Activar/desactivar icono clicado
+        const isActive = !mesh.userData.active;
+        toggleMeshState(iconGroup, isActive);
+        this.selectedIcon = isActive ? iconGroup : null;
+
+        if (iconGroup.some((m) => m.name === "Icon-Draw")) {
           sceneEl.emit("IconDraw-clicked", {
-            active: false,
-            mesh: this.iconMeshes.draw,
+            active: isActive,
+            mesh: iconGroup,
           });
         }
+
+        /*console.log(
+          `🎯 Icono ${mesh.name} ${isActive ? "ACTIVADO" : "DESACTIVADO"}`,
+        );*/
+    
+        updateCreatorUI();
+        return;
       }
     });
+
+    // ==========================
+    // TICK VR (DIBUJO)
+    // ==========================
+    this.tick = () => {
+      if (
+        !this.selectedIcon ||
+        !this.selectedIcon.some((m) => m.name === "Icon-Draw")
+      )
+        return;
+
+      const drawSystem = sceneEl.components["pointer-draw"];
+      if (!drawSystem || !drawSystem.data.enabled) return;
+
+      ["left", "right"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl) return;
+
+        const triggerPressed =
+          ctrl.components["vr-controls"]?.data?.pads?.[hand]?.buttonState?.[0]
+            ?.VRHold;
+
+        if (!triggerPressed) return;
+
+        const pos = new THREE.Vector3();
+        ctrl.object3D.getWorldPosition(pos);
+
+        drawSystem.addDrawPoint(pos);
+      });
+    };
   },
 
   registerListener: function (fn) {
@@ -89,10 +236,9 @@ AFRAME.registerSystem("creator-mode", {
   },
 
   isActive: function () {
-    return this.creatorModeActive;
+    return !!this.creatorModeActive;
   },
 });
-
 
 // ==========================
 // POINTER DRAW COMPONENT

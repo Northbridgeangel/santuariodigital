@@ -15,6 +15,17 @@ AFRAME.registerSystem("InteractionSystem", {
     const interactiveMeshes = [];
     let modelLoaded = false;
 
+    // ✅ HELPER VR — obtenemos el mesh interactivo más cercano al raycast (para VR)
+    const getInteractableRoot = (mesh) => {
+      while (mesh) {
+        if (mesh.userData && mesh.userData.interactable) {
+          return mesh;
+        }
+        mesh = mesh.parent;
+      }
+      return null;
+    };
+
     // -------------------------------------------------
     // Modelo cargado
     // -------------------------------------------------
@@ -76,7 +87,11 @@ AFRAME.registerSystem("InteractionSystem", {
       raycaster.far = this.data.maxDistance;
 
       const hit = raycaster.intersectObjects(interactiveMeshes, true)[0];
-      const mesh = hit?.object || null;
+      let mesh = hit?.object || null;
+
+      if (mesh) {
+        mesh = getInteractableRoot(mesh);
+      }
 
       mesh ? handleHover(mesh) : handleHoverExit();
       sceneEl.selectedMeshUnderPointer = mesh;
@@ -102,11 +117,17 @@ AFRAME.registerSystem("InteractionSystem", {
       raycaster.far = this.data.maxDistance;
 
       const hit = raycaster.intersectObjects(interactiveMeshes, true)[0];
-      const mesh = hit?.object || null;
 
-      if (mesh) handleClick(mesh);
+      let mesh = hit?.object || null;
+      if (mesh) {
+        mesh = getInteractableRoot(mesh);
+      }
+
+      if (!mesh) return;
+
+      handleClick(mesh);
       sceneEl.emit("mesh-clicked", { mesh });
-      console.log(`🔴 CLICK REAL: ${mesh.name}`);
+      //console.log(`🔴 CLICK REAL: ${mesh.name}`);
     };
 
     const attachPointerEvents = () => {
@@ -120,6 +141,24 @@ AFRAME.registerSystem("InteractionSystem", {
       else attach();
     };
     attachPointerEvents();
+
+    // 🎮 Botón 4 para UI (Creator Mode / Change Note) - Emite eventos click en VR con botón 4 y guarda SelectedMeshUnderPointer
+    sceneEl.addEventListener("enter-vr", () => {
+      ["left", "right"].forEach((hand) => {
+        const controllerEl = document.querySelector(`#controller-${hand}`);
+        if (!controllerEl) return;
+
+        controllerEl.addEventListener("abuttondown", () => {
+          // botón 4
+          const mesh = sceneEl.selectedMeshUnderPointer;
+          if (!mesh) return;
+
+          handleClick(mesh);
+          sceneEl.emit("mesh-clicked", { mesh });
+          //console.log(`🎮 VR CLICK (botón 4): ${mesh.name}`);
+        });
+      });
+    });
 
     // -------------------------------------------------
     // Tick VR fuera de model-loaded
@@ -138,7 +177,11 @@ AFRAME.registerSystem("InteractionSystem", {
         ray.far = this.data.maxDistance;
 
         const hit = ray.intersectObjects(interactiveMeshes, true)[0];
-        const mesh = hit?.object || null;
+
+        let mesh = hit?.object || null;
+        if (mesh) {
+          mesh = getInteractableRoot(mesh);
+        }
 
         mesh ? handleHover(mesh) : handleHoverExit();
         sceneEl.selectedMeshUnderPointer = mesh;

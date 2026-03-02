@@ -22,31 +22,25 @@ AFRAME.registerComponent("changenote", {
       if (this.noteMeshes.Dorm) this.noteMeshes.Dorm.visible = false;
       if (this.noteMeshes.Studio) this.noteMeshes.Studio.visible = true;
 
-      // Botón clickable
+      // Registrar botón como interactable
       if (this.noteMeshes.Btn) {
-        this.noteMeshes.Btn.userData.clickable = true;
+        this.noteMeshes.Btn.userData.interactable = true;
+        window.OpenCentralGlobals.core.interactiveMeshes.push(this.noteMeshes.Btn);
       }
 
-      console.log("🟢 Carteles inicializados: Dorm invisible, Studio visible");
+      console.log("🟢 Carteles inicializados y registrados VR/mouse");
     };
 
     if (escenario.getObject3D("mesh")) setupNotes();
     escenario.addEventListener("model-loaded", setupNotes);
 
-    // 🔹 Escuchar clicks globales del InteractionSystem
+    // Escuchar clicks globales
     sceneEl.addEventListener("mesh-clicked", (evt) => {
       const clickedMesh = evt.detail.mesh;
       if (!clickedMesh) return;
 
-      // Si es el botón, hacemos toggle
       if (clickedMesh.name === this.btnMeshName) {
         this.toggle();
-
-        // 🔹 Deseleccionamos el botón inmediatamente
-        if (clickedMesh === selectedMesh) {
-          resetMesh(clickedMesh); // quita resalte click
-          selectedMesh = null; // deseleccionamos
-        }
       }
     });
   },
@@ -57,9 +51,8 @@ AFRAME.registerComponent("changenote", {
     this.noteModeActive = !this.noteModeActive;
     this.noteMeshes.Dorm.visible = this.noteModeActive;
     this.noteMeshes.Studio.visible = !this.noteModeActive;
-
-    console.log(
+    /*console.log(
       `🎮 Note Mode toggled: ${this.noteModeActive ? "Dorm visible" : "Studio visible"}`,
-    );
+    );*/
   },
 });

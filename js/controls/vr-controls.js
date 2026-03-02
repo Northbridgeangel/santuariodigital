@@ -20,7 +20,7 @@ AFRAME.registerComponent("vr-controls", {
       if (!session) return;
 
       this.xrSessionActive = true;
-      console.log("🟢 Session WebXR activa");
+      //console.log("🟢 Session WebXR activa");
 
       session.addEventListener("inputsourceschange", (evt) => {
         // ➕ Gamepads añadidos
@@ -45,7 +45,7 @@ AFRAME.registerComponent("vr-controls", {
           this.el.sceneEl.VRButtonState[hand] =
             this.data.pads[hand].buttonState;
 
-          console.log(`🎮 Gamepad añadido: ${hand}`);
+          //console.log(`🎮 Gamepad añadido: ${hand}`);
         });
 
         // ➖ Gamepads eliminados
@@ -55,7 +55,7 @@ AFRAME.registerComponent("vr-controls", {
           const hand = source.handedness || "unknown";
 
           if (this.data.pads[hand]) {
-            console.log(`❌ Gamepad eliminado: ${hand}`);
+            //console.log(`❌ Gamepad eliminado: ${hand}`);
             delete this.data.pads[hand];
             delete this.el.sceneEl.VRButtonState[hand];
           }
@@ -67,7 +67,7 @@ AFRAME.registerComponent("vr-controls", {
       this.xrSessionActive = false;
       this.data.pads = {};
       this.el.sceneEl.VRButtonState = {};
-      console.log("🔴 Saliendo de VR");
+      //console.log("🔴 Saliendo de VR");
     });
   },
 
@@ -99,7 +99,7 @@ AFRAME.registerComponent("vr-controls", {
         // 🔔 Console log del tipo de toque
         if (btnState.VRHold || btnState.VRClick) {
           const tipo = btnState.VRHold ? "VRHold" : "VRClick";
-          console.log(`Tipo de toque: ${tipo} | Botón ${i} | Mano: ${hand}`);
+          //console.log(`Tipo de toque: ${tipo} | Botón ${i} | Mano: ${hand}`);
         }
       });
 

@@ -3,6 +3,20 @@ let selectedMesh = null; // mesh actualmente activo
 let hoveredMesh = null; // mesh actualmente hovered
 
 function handleClick(mesh) {
+  //-----------------------------------------
+  // 🔹 Excepciones para Creator Menu y Iconos (Modo especial)
+  //-----------------------------------------
+  if (
+    mesh.name.startsWith("Btn-creator-menú") ||
+    mesh.name.startsWith("Icon")
+  ) {
+    // NO resetear aquí, el sistema creator-mode controla el estado
+    return; // 🚫 salir, solo la lógica de resaltar se hará desde creator-mode
+  }
+
+  //-----------------------------------------
+  // 🔹 Lógica genérica de selección/desselección para otros meshes
+  //-----------------------------------------
   // 🔹 Si ya había un mesh seleccionado distinto, lo reseteamos
   if (selectedMesh && selectedMesh !== mesh) {
     resetMesh(selectedMesh);
@@ -28,6 +42,9 @@ function handleHover(mesh) {
   // Si hay algo seleccionado distinto, no hacemos hover
   if (selectedMesh) return;
 
+  // 🔒 No aplicar hover a meshes activos
+  if (mesh.userData?.active) return;
+
   // 🔹 Si el cursor sale de un mesh anterior, reseteamos
   if (hoveredMesh && hoveredMesh !== mesh) {
     resetMesh(hoveredMesh);
@@ -45,14 +62,39 @@ function handleHover(mesh) {
   if (hoveredMesh !== mesh) {
     resaltarMesh(mesh, "hover");
     hoveredMesh = mesh;
-    console.log(`🟢 HOVER: ${mesh.name}`);
+    //console.log(`🟢 HOVER: ${mesh.name}`);
   }
 }
 
 // 🔹 Reseteo cuando el cursor sale de cualquier mesh
 function handleHoverExit() {
-  if (!selectedMesh && hoveredMesh) {
-    resetMesh(hoveredMesh);
+  if (!hoveredMesh) return;
+
+  // 🔒 Si el mesh está activo (ej: Creator Menu), no lo reseteamos
+  if (hoveredMesh.userData?.active) {
+    console.log(
+      "HoverExit sobre:",
+      hoveredMesh?.name,
+      "active:",
+      hoveredMesh?.userData?.active,
+    );
+    return;
+  }
+
+  if (!selectedMesh) {
+    resetMesh(hoveredMesh && hoveredMesh);
     hoveredMesh = null;
   }
 }
+
+// ==========================
+// HOVER CONTROL API GLOBAL
+// ==========================
+window.HoverControl = window.HoverControl || {};
+
+window.HoverControl.clearHoverFor = function (mesh) {
+  if (!mesh) return;
+  if (hoveredMesh === mesh) {
+    hoveredMesh = null;
+  }
+};
