@@ -2,7 +2,7 @@
 /* WINDOWS GLOBALS PARA CREATOR MODE */
 /* ========================== */
 window.DrawingMode = {
-  type: "ground", // "ground" = plano suelo 2D, "wall" = 2D pared, "3D" = 3D libre
+  type: "3D", // "ground" = plano suelo 2D, "wall" = 2D pared, "3D" = 3D libre
 };
 
 /* ========================== */
@@ -344,7 +344,11 @@ AFRAME.registerComponent("pointer-draw", {
           modelRoot.traverse((child) => {
             if (!child.isMesh || !child.name) return;
             const name = child.name.toLowerCase();
-            if (name.startsWith("walls") || name === "objetoañadido") {
+            if (
+              name.startsWith("walls") ||
+              name === "selfnotemesh" ||
+              name === "objetoañadido"
+            ) {
               this._wallMeshes.push(child);
             }
           });
@@ -476,14 +480,50 @@ AFRAME.registerComponent("pointer-draw", {
   },
 });
 
-/* ========================== */
-/* PLANE SELECT COMPONENT */
-/* ========================== */
+/* ========================== 
+PLANE SELECT COMPONENT OPTIMIZADO 
+========================== */
 AFRAME.registerComponent("plane-selector", {
   init: function () {
     const sceneEl = this.el.sceneEl;
 
+    // Función para actualizar el visual de los iconos según el tipo actual
+    const updateVisual = () => {
+      const modelRoot =
+        window.OpenCentralGlobals.core.escenario.getObject3D("mesh");
+      if (!modelRoot) return;
+
+      const meshGround = modelRoot.getObjectByName("Icon-PlaneSelector_Mesh_1");
+      const meshWall = modelRoot.getObjectByName("Icon-PlaneSelector_Mesh_2");
+      const mesh3D = modelRoot.getObjectByName("Icon-PlaneSelector_Mesh");
+
+      // 🔹 Reset todos primero
+      [meshGround, meshWall, mesh3D].forEach((m) => {
+        if (m) resetMesh(m);
+      });
+
+      // 🔹 Activar solo los correspondientes al tipo actual
+      switch (window.DrawingMode.type) {
+        case "ground":
+          if (meshGround) resaltarMesh(meshGround, "click");
+          break;
+        case "wall":
+          if (meshWall) resaltarMesh(meshWall, "click");
+          break;
+        case "3D":
+          [mesh3D, meshGround, meshWall].forEach((m) => {
+            if (m) resaltarMesh(m, "click");
+          });
+          break;
+      }
+    };
+
+    // 🔹 Aseguramos que al iniciar la escena, el visual coincide con el tipo actual
+    updateVisual();
+
+    // 🔹 Cambiar tipo y actualizar visual al hacer click
     sceneEl.addEventListener("IconPlaneSelector-clicked", () => {
+      // Cambiar tipo según ciclo ground → wall → 3D → ground
       if (window.DrawingMode.type === "ground")
         window.DrawingMode.type = "wall";
       else if (window.DrawingMode.type === "wall")
@@ -491,6 +531,9 @@ AFRAME.registerComponent("plane-selector", {
       else window.DrawingMode.type = "ground";
 
       console.log("Modo de dibujo cambiado a:", window.DrawingMode.type);
+
+      // Actualizar visual
+      updateVisual();
     });
   },
 });
