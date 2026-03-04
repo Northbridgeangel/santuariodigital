@@ -1,9 +1,15 @@
-// ==========================
-// CREATOR MODE SYSTEM
-// ==========================
+/* ========================== */
+/* WINDOWS GLOBALS PARA CREATOR MODE */
+/* ========================== */
+window.DrawingMode = {
+  type: "ground", // "ground" = plano suelo 2D, "wall" = 2D pared, "3D" = 3D libre
+};
+
+/* ========================== */
+/* CREATOR MODE SYSTEM */
+/* ========================== */
 AFRAME.registerSystem("creator-mode", {
   schema: {},
-
   init: function () {
     const escenario = window.OpenCentralGlobals.core.escenario;
     const sceneEl = this.el.sceneEl;
@@ -14,9 +20,6 @@ AFRAME.registerSystem("creator-mode", {
     this.creatorMenu = [];
     this.selectedIcon = null;
 
-    // ==========================
-    // FUNCIONES AUXILIARES
-    // ==========================
     const setRayVisible = (visible) => {
       ["right", "left"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
@@ -44,7 +47,6 @@ AFRAME.registerSystem("creator-mode", {
 
     const updateCreatorUI = () => {
       if (!this.iconMeshes) return;
-
       const anyIconVisible = Object.values(this.iconMeshes).some((group) =>
         group.some((m) => m && m.visible),
       );
@@ -68,16 +70,17 @@ AFRAME.registerSystem("creator-mode", {
       }
     };
 
-    // ==========================
-    // SETUP ICONOS
-    // ==========================
     const setupIcons = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
 
       this.iconMeshes = {
         draw: [modelRoot.getObjectByName("Icon-Draw")],
-        plane: [modelRoot.getObjectByName("Icon-PlaneSelector")],
+        plane: [
+          modelRoot.getObjectByName("Icon-PlaneSelector_Mesh"),
+          modelRoot.getObjectByName("Icon-PlaneSelector_Mesh_1"),
+          modelRoot.getObjectByName("Icon-PlaneSelector_Mesh_2"),
+        ],
         color: [
           modelRoot.getObjectByName("Icon-Colorpicker_Mesh"),
           modelRoot.getObjectByName("Icon-Colorpicker_Mesh_1"),
@@ -103,33 +106,20 @@ AFRAME.registerSystem("creator-mode", {
     if (escenario.getObject3D("mesh")) setupIcons();
     escenario.addEventListener("model-loaded", setupIcons);
 
-    // ==========================
-    // EVENTO CLICK GLOBAL
-    // ==========================
     sceneEl.addEventListener("mesh-clicked", (evt) => {
       const mesh = evt.detail.mesh;
       if (!mesh) return;
 
-      // --------------------------
-      // TOGGLE CREATOR MENU
-      // --------------------------
       if (mesh.name.startsWith("Btn-creator-menú")) {
         this.creatorModeActive = !this.creatorModeActive;
-
-        Object.values(this.iconMeshes).forEach((group) => {
-          group.forEach((m) => {
-            if (m) m.visible = this.creatorModeActive;
-          });
-        });
-
+        Object.values(this.iconMeshes).forEach((group) =>
+          group.forEach((m) => (m.visible = this.creatorModeActive)),
+        );
         toggleMeshState(this.creatorMenu, this.creatorModeActive);
         updateCreatorUI();
         return;
       }
 
-      // --------------------------
-      // ICON CLICK
-      // --------------------------
       if (
         mesh.name.startsWith("Icon") &&
         Object.values(this.iconMeshes).some((group) =>
@@ -138,7 +128,6 @@ AFRAME.registerSystem("creator-mode", {
       ) {
         let iconGroup = null;
         let iconKey = null;
-
         for (const key in this.iconMeshes) {
           if (this.iconMeshes[key].some((m) => m === mesh)) {
             iconGroup = this.iconMeshes[key];
@@ -146,7 +135,6 @@ AFRAME.registerSystem("creator-mode", {
             break;
           }
         }
-
         if (!iconGroup) return;
 
         const drawGroup = this.iconMeshes.draw;
@@ -155,13 +143,8 @@ AFRAME.registerSystem("creator-mode", {
 
         const prevSelected = this.selectedIcon;
 
-        // ==========================
-        // ICON DRAW
-        // ==========================
         if (iconKey === "draw") {
           const drawActive = drawPlaneGroup.some((m) => m.userData.active);
-
-          // Si ya estaba activo, desactivamos el grupo
           if (drawActive) {
             toggleMeshState(drawPlaneGroup, false);
             sceneEl.emit("IconDraw-clicked", {
@@ -170,16 +153,8 @@ AFRAME.registerSystem("creator-mode", {
             });
             this.selectedIcon = null;
           } else {
-            // Activamos el grupo
-            if (prevSelected && prevSelected !== drawPlaneGroup) {
+            if (prevSelected && prevSelected !== drawPlaneGroup)
               toggleMeshState(prevSelected, false);
-              if (prevSelected.some((m) => m.name === "Icon-Draw")) {
-                sceneEl.emit("IconDraw-clicked", {
-                  active: false,
-                  mesh: prevSelected,
-                });
-              }
-            }
             toggleMeshState(drawPlaneGroup, true);
             sceneEl.emit("IconDraw-clicked", {
               active: true,
@@ -187,35 +162,21 @@ AFRAME.registerSystem("creator-mode", {
             });
             this.selectedIcon = drawPlaneGroup;
           }
-
           updateCreatorUI();
           return;
         }
 
-        // ==========================
-        // ICON PLANE SELECTOR (solo depende de Draw)
-        // ==========================
         if (iconKey === "plane") {
           if (!drawPlaneGroup.some((m) => m.userData.active)) return;
           toggleMeshState(drawPlaneGroup, true);
           this.selectedIcon = drawPlaneGroup;
           updateCreatorUI();
+          sceneEl.emit("IconPlaneSelector-clicked", { mesh: mesh });
           return;
         }
 
-        // ==========================
-        // OTROS ICONOS
-        // ==========================
-        if (prevSelected && prevSelected !== iconGroup) {
+        if (prevSelected && prevSelected !== iconGroup)
           toggleMeshState(prevSelected, false);
-          if (prevSelected.some((m) => m.name === "Icon-Draw")) {
-            sceneEl.emit("IconDraw-clicked", {
-              active: false,
-              mesh: prevSelected,
-            });
-          }
-        }
-
         const isActive = !iconGroup.some((m) => m.userData.active);
         toggleMeshState(iconGroup, isActive);
         this.selectedIcon = isActive ? iconGroup : null;
@@ -229,19 +190,16 @@ AFRAME.registerSystem("creator-mode", {
     // ==========================
     this.tick = () => {
       if (!this.selectedIcon?.some((m) => m.name === "Icon-Draw")) return;
-
       const drawSystem = sceneEl.components["pointer-draw"];
       if (!drawSystem) return;
 
-      ["left", "right"].forEach((hand) => {
+      ["right", "left"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
         if (!ctrl || ctrl.hasDrawListener) return;
 
         ctrl.hasDrawListener = true;
-
         ctrl.addEventListener("triggerdown", () => {
           if (!drawSystem.data.enabled) return;
-
           const pos = new THREE.Vector3();
           ctrl.object3D.getWorldPosition(pos);
           drawSystem.addDrawPoint(pos);
@@ -259,10 +217,9 @@ AFRAME.registerSystem("creator-mode", {
   },
 });
 
-
-// ==========================
-// POINTER DRAW COMPONENT OPTIMIZADO PARA VR
-// ==========================
+/* ========================== */
+/* POINTER DRAW COMPONENT OPTIMIZADO PARA VR + MODO PLANE SELECTOR */
+/* ========================== */
 AFRAME.registerComponent("pointer-draw", {
   schema: { enabled: { type: "boolean", default: false } },
 
@@ -270,19 +227,16 @@ AFRAME.registerComponent("pointer-draw", {
     const sceneEl = this.el.sceneEl;
     const escenario = window.OpenCentralGlobals.core.escenario;
 
-    // -------------------------
-    // ESTADO DE DIBUJO
-    // -------------------------
-    this.isPointerDown = false; // mouse / touch
-    this.drawPoints = []; // puntos acumulados
-    this.drawLine = null; // línea actual
+    this.isPointerDown = false;
+    this.currentPoints = null;
+    this.currentLine = null;
+    this.currentMesh = null; // mesh actual donde se dibuja
     this.drawGroup = new THREE.Group();
     this.drawGroup.name = "DrawGroup";
+    this.handTriggerDown = { right: false, left: false };
 
-    // -------------------------
-    // FLAGS VR para trigger continuo
-    // -------------------------
-    this.handTriggerDown = { right: false, left: false }; // 🔹 nuevo: trackea trigger presionado
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
 
     // -------------------------
     // Añadir DrawGroup al modelo
@@ -296,71 +250,182 @@ AFRAME.registerComponent("pointer-draw", {
     escenario.addEventListener("model-loaded", addDrawGroup);
 
     // -------------------------
-    // SOLO se activa/desactiva desde IconDraw-clicked
+    // Activación desde Creator Mode
     // -------------------------
     sceneEl.addEventListener("IconDraw-clicked", (evt) => {
       this.data.enabled = evt.detail.active;
-      this.isPointerDown = evt.detail.active;
+      this.isPointerDown = false;
+      this.currentPoints = null;
+      this.currentLine = null;
+      this.currentMesh = null;
     });
 
     // -------------------------
-    // Función para añadir puntos al dibujo
+    // Añadir punto al dibujo
     // -------------------------
-    this.addDrawPoint = (point) => {
-      this.drawPoints.push(point.clone());
-      if (this.drawPoints.length < 2) return; // 🔹 No dibujar si menos de 2 puntos
+    this.addDrawPoint = (point, mesh) => {
+      // 🔹 Si no hay punto o mesh, finalizamos línea
+      if (!point || !mesh) {
+        this.currentPoints = null;
+        this.currentLine = null;
+        this.currentMesh = null;
+        return;
+      }
 
-      if (this.drawLine) this.drawGroup.remove(this.drawLine);
+      // 🔹 Si cambiamos de mesh, finalizamos línea anterior
+      if (this.currentMesh && mesh !== this.currentMesh) {
+        this.currentPoints = [];
+        this.currentLine = null;
+      }
 
-      // 🔹 Dibujar línea continua usando BufferGeometry
+      this.currentMesh = mesh;
+
+      if (!this.currentPoints) {
+        this.currentPoints = [];
+        this.currentLine = null;
+      }
+
+      this.currentPoints.push(point.clone());
+
+      if (this.currentPoints.length < 2) return;
+
+      if (this.currentLine) this.drawGroup.remove(this.currentLine);
+
       const geometry = new THREE.BufferGeometry().setFromPoints(
-        this.drawPoints,
+        this.currentPoints,
       );
-
       const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-      this.drawLine = new THREE.Line(geometry, material);
-      this.drawGroup.add(this.drawLine);
+
+      this.currentLine = new THREE.Line(geometry, material);
+      this.drawGroup.add(this.currentLine);
     };
 
     // -------------------------
-    // Limpiar dibujo completo
+    // Limpiar dibujo
     // -------------------------
     window.clearDrawing = () => {
-      this.drawPoints = [];
-      if (this.drawLine) {
-        this.drawGroup.remove(this.drawLine);
-        this.drawLine = null;
+      this.drawGroup.clear();
+      this.currentPoints = null;
+      this.currentLine = null;
+      this.currentMesh = null;
+    };
+
+    // -------------------------
+    // Obtener posición según modo y mesh intersectado
+    // -------------------------
+    this.getDrawPosition = (ctrlOrPointer) => {
+      const type = window.DrawingMode.type;
+      const pos = new THREE.Vector3();
+      let intersectedMesh = null;
+
+      /* ---------- GROUND ---------- */
+      if (type === "ground") {
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+        if (ctrlOrPointer.isVector2) {
+          raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
+          raycaster.ray.intersectPlane(plane, pos);
+        } else {
+          ctrlOrPointer.object3D.getWorldPosition(pos);
+        }
+
+        intersectedMesh = escenario.getObject3D("mesh"); // todo el escenario como “mesh”
+        return { point: pos, mesh: intersectedMesh };
       }
+
+      /* ---------- WALL / OBJETO AÑADIDO ---------- */
+      if (type === "wall") {
+        const modelRoot = escenario.getObject3D("mesh");
+        if (!modelRoot) return { point: null, mesh: null };
+
+        // 🔹 Cache de meshes válidos
+        if (!this._wallMeshes) {
+          this._wallMeshes = [];
+          modelRoot.traverse((child) => {
+            if (!child.isMesh || !child.name) return;
+            const name = child.name.toLowerCase();
+            if (name.startsWith("walls") || name === "objetoañadido") {
+              this._wallMeshes.push(child);
+            }
+          });
+        }
+
+        if (this._wallMeshes.length === 0) return { point: null, mesh: null };
+
+        if (ctrlOrPointer.isVector2) {
+          raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
+        } else {
+          const origin = new THREE.Vector3();
+          ctrlOrPointer.object3D.getWorldPosition(origin);
+
+          const direction = new THREE.Vector3();
+          ctrlOrPointer.object3D.getWorldDirection(direction);
+
+          raycaster.set(origin, direction);
+        }
+
+        const intersects = raycaster.intersectObjects(this._wallMeshes, true);
+        if (intersects.length > 0) {
+          intersectedMesh = intersects[0].object;
+          pos.copy(intersects[0].point);
+          return { point: pos, mesh: intersectedMesh };
+        }
+
+        return { point: null, mesh: null };
+      }
+
+      /* ---------- 3D LIBRE ---------- */
+      if (type === "3D") {
+        if (ctrlOrPointer.isVector2) {
+          raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
+          const distance = 0.2;
+          pos
+            .copy(raycaster.ray.origin)
+            .add(raycaster.ray.direction.clone().multiplyScalar(distance));
+        } else {
+          const origin = new THREE.Vector3();
+          const direction = new THREE.Vector3();
+          ctrlOrPointer.object3D.getWorldPosition(origin);
+          ctrlOrPointer.object3D.getWorldDirection(direction);
+          const distance = 0.2;
+          pos.copy(origin).add(direction.multiplyScalar(distance));
+        }
+
+        intersectedMesh = escenario.getObject3D("mesh");
+        return { point: pos, mesh: intersectedMesh };
+      }
+
+      return { point: null, mesh: null };
     };
 
     // -------------------------
-    // Eventos pointer (desktop / mobile)
+    // DESKTOP POINTER
     // -------------------------
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-
-    const onPointerDown = (e) => {
-      if (this.data.enabled) this.isPointerDown = true;
+    const onPointerDown = () => {
+      if (!this.data.enabled) return;
+      this.isPointerDown = true;
+      this.currentPoints = [];
+      this.currentLine = null;
+      this.currentMesh = null;
     };
-    const onPointerUp = (e) => {
+
+    const onPointerUp = () => {
       this.isPointerDown = false;
+      this.currentPoints = null;
+      this.currentLine = null;
+      this.currentMesh = null;
     };
+
     const onPointerMove = (e) => {
       if (!this.data.enabled || !this.isPointerDown) return;
 
       const rect = sceneEl.canvas.getBoundingClientRect();
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      pointer.isVector2 = true;
 
-      raycaster.setFromCamera(pointer, sceneEl.camera);
-
-      const pos3D = new THREE.Vector3();
-      raycaster.ray.intersectPlane(
-        new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
-        pos3D,
-      );
-
-      if (pos3D) this.addDrawPoint(pos3D);
+      const { point, mesh } = this.getDrawPosition(pointer);
+      this.addDrawPoint(point, mesh);
     };
 
     sceneEl.addEventListener(
@@ -374,20 +439,24 @@ AFRAME.registerComponent("pointer-draw", {
     );
 
     // -------------------------
-    // ESCUCHA TRIGGER VR (continuo)
+    // VR TRIGGERS
     // -------------------------
     ["right", "left"].forEach((hand) => {
-      const controllerEl = document.querySelector(`#controller-${hand}`);
-      if (!controllerEl) return;
+      const controller = document.querySelector(`#controller-${hand}`);
+      if (!controller) return;
 
-      // 🔹 Trigger down: activa flag
-      controllerEl.addEventListener("triggerdown", () => {
+      controller.addEventListener("triggerdown", () => {
         this.handTriggerDown[hand] = true;
+        this.currentPoints = [];
+        this.currentLine = null;
+        this.currentMesh = null;
       });
 
-      // 🔹 Trigger up: desactiva flag
-      controllerEl.addEventListener("triggerup", () => {
+      controller.addEventListener("triggerup", () => {
         this.handTriggerDown[hand] = false;
+        this.currentPoints = null;
+        this.currentLine = null;
+        this.currentMesh = null;
       });
     });
   },
@@ -395,20 +464,33 @@ AFRAME.registerComponent("pointer-draw", {
   tick: function () {
     if (!this.data.enabled) return;
 
-    const sceneEl = this.el.sceneEl;
-
-    // 🔹 Prioridad mano derecha, luego izquierda
     ["right", "left"].forEach((hand) => {
       if (!this.handTriggerDown[hand]) return;
 
-      const controllerEl = document.querySelector(`#controller-${hand}`);
-      if (!controllerEl) return;
+      const controller = document.querySelector(`#controller-${hand}`);
+      if (!controller) return;
 
-      // 🔹 Obtener posición del controlador
-      const pos = new THREE.Vector3();
-      controllerEl.object3D.getWorldPosition(pos);
+      const { point, mesh } = this.getDrawPosition(controller);
+      this.addDrawPoint(point, mesh);
+    });
+  },
+});
 
-      this.addDrawPoint(pos); // 🔹 añade punto continuo mientras trigger está presionado
+/* ========================== */
+/* PLANE SELECT COMPONENT */
+/* ========================== */
+AFRAME.registerComponent("plane-selector", {
+  init: function () {
+    const sceneEl = this.el.sceneEl;
+
+    sceneEl.addEventListener("IconPlaneSelector-clicked", () => {
+      if (window.DrawingMode.type === "ground")
+        window.DrawingMode.type = "wall";
+      else if (window.DrawingMode.type === "wall")
+        window.DrawingMode.type = "3D";
+      else window.DrawingMode.type = "ground";
+
+      console.log("Modo de dibujo cambiado a:", window.DrawingMode.type);
     });
   },
 });
