@@ -1,3 +1,8 @@
+/* . WINDOW GLOBALS PARA CREATOR MODE . */
+window.DrawingMode = {
+  type: "ground", // "ground" = plano suelo 2D, "wall" = 2D pared, "3D" = 3D libre
+};
+
 // ==========================
 // CREATOR MODE SYSTEM
 // ==========================
@@ -11,7 +16,7 @@ AFRAME.registerSystem("creator-mode", {
     this.creatorModeActive = false;
     this.listeners = [];
     this.iconMeshes = null;
-    this.creatorMenu = [];
+    this.creatorMenu = []; // Todas las mallas del menú Creator
     this.selectedIcon = null;
 
     // ==========================
@@ -27,12 +32,18 @@ AFRAME.registerSystem("creator-mode", {
     };
 
     const toggleMeshState = (meshes, active) => {
+      // Acepta un mesh individual o un array de meshes
       const meshArray = Array.isArray(meshes) ? meshes : [meshes];
+
       meshArray.forEach((mesh) => {
         if (!mesh) return;
+
         mesh.userData.active = active;
+
         if (active) {
           resaltarMesh(mesh, "click");
+
+          // 🔥 Sacarlo del sistema hover cuando pasa a activo persistente
           if (window.HoverControl?.clearHoverFor) {
             window.HoverControl.clearHoverFor(mesh);
           }
@@ -43,25 +54,32 @@ AFRAME.registerSystem("creator-mode", {
     };
 
     const updateCreatorUI = () => {
-      if (!this.iconMeshes) return;
+      if (!this.iconMeshes || !this.creatorMenu) return;
 
       const anyIconVisible = Object.values(this.iconMeshes).some((group) =>
         group.some((m) => m && m.visible),
       );
 
+      // Desactivar icono seleccionado si los iconos se ocultan
       if (!anyIconVisible && this.selectedIcon) {
         toggleMeshState(this.selectedIcon, false);
+
         if (this.selectedIcon.some((m) => m.name === "Icon-Draw")) {
           sceneEl.emit("IconDraw-clicked", {
             active: false,
             mesh: this.selectedIcon,
           });
         }
+
         this.selectedIcon = null;
         setRayVisible(true);
       }
 
-      if (this.selectedIcon?.some((m) => m.name === "Icon-Draw")) {
+      // Ajustar rayos según Icon-Draw activo
+      if (
+        this.selectedIcon &&
+        this.selectedIcon.some((m) => m.name === "Icon-Draw")
+      ) {
         setRayVisible(false);
       } else {
         setRayVisible(true);
@@ -69,26 +87,28 @@ AFRAME.registerSystem("creator-mode", {
     };
 
     // ==========================
-    // SETUP ICONOS
+    // SETUP ICONOS Y MENÚ CREATOR
     // ==========================
     const setupIcons = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
 
+      // 🔹 Cada icono ahora es un array de mallas (aunque tenga una sola)
       this.iconMeshes = {
         draw: [modelRoot.getObjectByName("Icon-Draw")],
-        plane: [modelRoot.getObjectByName("Icon-PlaneSelector")],
         color: [
           modelRoot.getObjectByName("Icon-Colorpicker_Mesh"),
           modelRoot.getObjectByName("Icon-Colorpicker_Mesh_1"),
         ],
         eraser: [modelRoot.getObjectByName("Icon-Eraser")],
+        plane: [modelRoot.getObjectByName("Icon-PlaneSelector")],
       };
 
+      // 🔹 Inicializar visibilidad y estados
       Object.values(this.iconMeshes).forEach((group) => {
         group.forEach((m) => {
           if (!m) return;
-          m.visible = false;
+          m.visible = false; // 🔹 ahora invisible al principio
           m.userData.active = false;
           m.userData.interactable = true;
           window.OpenCentralGlobals.core.interactiveMeshes.push(m);
@@ -98,6 +118,8 @@ AFRAME.registerSystem("creator-mode", {
       this.creatorMenu = Object.values(modelRoot.children).filter((m) =>
         m.name.startsWith("Btn-creator-menú"),
       );
+
+      //console.log("🎨 Iconos y menú Creator inicializados");
     };
 
     if (escenario.getObject3D("mesh")) setupIcons();
@@ -114,21 +136,25 @@ AFRAME.registerSystem("creator-mode", {
       // TOGGLE CREATOR MENU
       // --------------------------
       if (mesh.name.startsWith("Btn-creator-menú")) {
-        this.creatorModeActive = !this.creatorModeActive;
+        const isMenuActive = !this.creatorModeActive;
+        this.creatorModeActive = isMenuActive;
 
+        // Mostrar/ocultar iconos
         Object.values(this.iconMeshes).forEach((group) => {
           group.forEach((m) => {
-            if (m) m.visible = this.creatorModeActive;
+            if (m) m.visible = isMenuActive;
           });
         });
 
-        toggleMeshState(this.creatorMenu, this.creatorModeActive);
+        // Resaltar o resetear todas las mallas del menú
+        toggleMeshState(this.creatorMenu, isMenuActive);
+
         updateCreatorUI();
         return;
       }
 
       // --------------------------
-      // ICON CLICK
+      // ICON-TOOL CLICK
       // --------------------------
       if (
         mesh.name.startsWith("Icon") &&
@@ -136,89 +162,62 @@ AFRAME.registerSystem("creator-mode", {
           group.some((m) => m.visible),
         )
       ) {
+        // 🔹 Determinar grupo completo del icono clicado
         let iconGroup = null;
-        let iconKey = null;
-
         for (const key in this.iconMeshes) {
           if (this.iconMeshes[key].some((m) => m === mesh)) {
             iconGroup = this.iconMeshes[key];
-            iconKey = key;
             break;
           }
         }
-
         if (!iconGroup) return;
 
-        const drawGroup = this.iconMeshes.draw;
-        const planeGroup = this.iconMeshes.plane;
-        const drawPlaneGroup = [...drawGroup, ...planeGroup];
+        // Desactivar icono anterior
+        if (this.selectedIcon && this.selectedIcon !== iconGroup) {
+          toggleMeshState(this.selectedIcon, false);
 
-        const prevSelected = this.selectedIcon;
-
-        // ==========================
-        // ICON DRAW
-        // ==========================
-        if (iconKey === "draw") {
-          const drawActive = drawPlaneGroup.some((m) => m.userData.active);
-
-          // Si ya estaba activo, desactivamos el grupo
-          if (drawActive) {
-            toggleMeshState(drawPlaneGroup, false);
+          //.Icon Draw desactivado.
+          if (this.selectedIcon.some((m) => m.name === "Icon-Draw")) {
             sceneEl.emit("IconDraw-clicked", {
               active: false,
-              mesh: drawPlaneGroup,
+              mesh: this.selectedIcon,
             });
-            this.selectedIcon = null;
-          } else {
-            // Activamos el grupo
-            if (prevSelected && prevSelected !== drawPlaneGroup) {
-              toggleMeshState(prevSelected, false);
-              if (prevSelected.some((m) => m.name === "Icon-Draw")) {
-                sceneEl.emit("IconDraw-clicked", {
-                  active: false,
-                  mesh: prevSelected,
-                });
-              }
-            }
-            toggleMeshState(drawPlaneGroup, true);
-            sceneEl.emit("IconDraw-clicked", {
-              active: true,
-              mesh: drawPlaneGroup,
-            });
-            this.selectedIcon = drawPlaneGroup;
           }
 
-          updateCreatorUI();
-          return;
-        }
-
-        // ==========================
-        // ICON PLANE SELECTOR (solo depende de Draw)
-        // ==========================
-        if (iconKey === "plane") {
-          if (!drawPlaneGroup.some((m) => m.userData.active)) return;
-          toggleMeshState(drawPlaneGroup, true);
-          this.selectedIcon = drawPlaneGroup;
-          updateCreatorUI();
-          return;
-        }
-
-        // ==========================
-        // OTROS ICONOS
-        // ==========================
-        if (prevSelected && prevSelected !== iconGroup) {
-          toggleMeshState(prevSelected, false);
-          if (prevSelected.some((m) => m.name === "Icon-Draw")) {
-            sceneEl.emit("IconDraw-clicked", {
+          //.Plane Selector desactivado.
+          if (this.selectedIcon.some((m) => m.name === "Icon-PlaneSelector")) {
+            sceneEl.emit("Icon-PlaneSelector-clicked", {
               active: false,
-              mesh: prevSelected,
+              mesh: this.selectedIcon,
             });
           }
         }
 
-        const isActive = !iconGroup.some((m) => m.userData.active);
+        // Activar/desactivar icono clicado
+        const isActive = !mesh.userData.active;
         toggleMeshState(iconGroup, isActive);
         this.selectedIcon = isActive ? iconGroup : null;
+
+        //.Icon Draw activado.
+        if (iconGroup.some((m) => m.name === "Icon-Draw")) {
+          sceneEl.emit("IconDraw-clicked", {
+            active: isActive,
+            mesh: iconGroup,
+          });
+        }
+
+        //.Plane Selector activado.
+        if (this.selectedIcon.some((m) => m.name === "Icon-PlaneSelector")) {
+          sceneEl.emit("Icon-PlaneSelector-clicked", {
+            active: isActive,
+            mesh: this.selectedIcon,
+          });
+        }
+
+        /*console.log(
+          `🎯 Icono ${mesh.name} ${isActive ? "ACTIVADO" : "DESACTIVADO"}`,
+        );*/
+
         updateCreatorUI();
         return;
       }
@@ -228,14 +227,18 @@ AFRAME.registerSystem("creator-mode", {
     // TICK VR (DIBUJO)
     // ==========================
     this.tick = () => {
-      if (!this.selectedIcon?.some((m) => m.name === "Icon-Draw")) return;
+      if (
+        !this.selectedIcon ||
+        !this.selectedIcon.some((m) => m.name === "Icon-Draw")
+      )
+        return;
 
       const drawSystem = sceneEl.components["pointer-draw"];
       if (!drawSystem) return;
 
       ["left", "right"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
-        if (!ctrl || ctrl.hasDrawListener) return;
+        if (!ctrl || ctrl.hasDrawListener) return; // evita múltiples listeners (rendimiento)
 
         ctrl.hasDrawListener = true;
 
@@ -244,7 +247,8 @@ AFRAME.registerSystem("creator-mode", {
 
           const pos = new THREE.Vector3();
           ctrl.object3D.getWorldPosition(pos);
-          drawSystem.addDrawPoint(pos);
+
+          drawSystem.addDrawPoint(pos); // ya no crea geometría nueva cada vez (rendimiento)
         });
       });
     };
@@ -258,7 +262,6 @@ AFRAME.registerSystem("creator-mode", {
     return !!this.creatorModeActive;
   },
 });
-
 
 // ==========================
 // POINTER DRAW COMPONENT OPTIMIZADO PARA VR
@@ -303,10 +306,12 @@ AFRAME.registerComponent("pointer-draw", {
       this.isPointerDown = evt.detail.active;
     });
 
+    /*SUSTITUYE ESTE ANTIGUO DRAWPOINT:
     // -------------------------
     // Función para añadir puntos al dibujo
     // -------------------------
     this.addDrawPoint = (point) => {
+      
       this.drawPoints.push(point.clone());
       if (this.drawPoints.length < 2) return; // 🔹 No dibujar si menos de 2 puntos
 
@@ -321,6 +326,29 @@ AFRAME.registerComponent("pointer-draw", {
       this.drawLine = new THREE.Line(geometry, material);
       this.drawGroup.add(this.drawLine);
     };
+*/ /*
+    POR EL 2.TIPOS DE RAYCASTER EN POSICIÓN (Icon-PlaneSelector):
+    
+    let drawPos = new THREE.Vector3();
+
+if (window.DrawingMode.type === "ground") {
+  // Plano suelo horizontal (desktop)
+  raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), drawPos);
+} else if (window.DrawingMode.type === "wall") {
+  // Detectar la malla wall y proyectar el punto sobre ella
+  const wallMesh = escenario.getObject3D("mesh").getObjectByName("Wall") || null;
+  if (wallMesh) {
+    const intersect = raycaster.ray.intersectObject(wallMesh, true);
+    if (intersect) drawPos.copy(intersect);
+  }
+} else if (window.DrawingMode.type === "3D") {
+  // Usar posición 3D del controlador (VR) o cámara (desktop)
+  drawPos.copy(controllerEl?.object3D?.getWorldPosition(new THREE.Vector3()) || raycaster.ray.origin);
+}
+
+// Ahora sí añadimos el punto
+this.addDrawPoint(drawPos);
+    */
 
     // -------------------------
     // Limpiar dibujo completo
@@ -410,5 +438,31 @@ AFRAME.registerComponent("pointer-draw", {
 
       this.addDrawPoint(pos); // 🔹 añade punto continuo mientras trigger está presionado
     });
+  },
+});
+
+// ==========================
+// PLANE SELECT COMPONENT
+// ==========================
+AFRAME.registerComponent("plane-selector", {
+  /*
+  Pasos for Plane Selector to get done:
+   0. Emitir evento Icon-PlaneSelector-clicked en creator mode system como hicimos con IconDraw.
+   1. Variable global que alterna
+   2. Tipos de raycaster en calculo de posición de pointer draw)  - Optimización → evitas cálculos innecesarios en tick de VR, porque solo calculamos la posición según DrawingMode.
+  */
+
+  init: function () {
+    //1. Variable global que alterna al clickar el Selector de planos
+    if (!window.DrawingMode || !window.DrawingMode.planeSelectorClicked) return;
+
+    if (window.DrawingMode.planeSelectorClicked) {
+      const current = window.DrawingMode.type;
+      if (current === "ground") window.DrawingMode.type = "wall";
+      else if (current === "wall") window.DrawingMode.type = "3D";
+      else window.DrawingMode.type = "ground";
+
+      console.log("Modo de dibujo:", window.DrawingMode.type);
+    }
   },
 });

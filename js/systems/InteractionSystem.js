@@ -127,7 +127,7 @@ AFRAME.registerSystem("InteractionSystem", {
 
       handleClick(mesh);
       sceneEl.emit("mesh-clicked", { mesh });
-      //console.log(`🔴 CLICK REAL: ${mesh.name}`);
+      console.log(`🔴 CLICK REAL: ${mesh.name}`);
     };
 
     const attachPointerEvents = () => {
