@@ -12,14 +12,24 @@ AFRAME.registerSystem("creator-mode", {
   schema: {},
   init: function () {
     const escenario = window.OpenCentralGlobals.core.escenario;
-    const sceneEl = this.el.sceneEl;
+    const sceneEl = this.el;
 
     this.creatorModeActive = false;
-    this.listeners = [];
     this.iconMeshes = null;
     this.creatorMenu = [];
     this.selectedIcon = null;
 
+    // Estado centralizado de iconos
+    this.iconState = {
+      draw: false,
+      plane: false,
+      eraser: false,
+      color: false,
+    };
+
+    // -----------------------
+    // FUNCIONES DE AYUDA
+    // -----------------------
     const setRayVisible = (visible) => {
       ["right", "left"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
@@ -36,40 +46,128 @@ AFRAME.registerSystem("creator-mode", {
         mesh.userData.active = active;
         if (active) {
           resaltarMesh(mesh, "click");
-          if (window.HoverControl?.clearHoverFor) {
+          if (window.HoverControl?.clearHoverFor)
             window.HoverControl.clearHoverFor(mesh);
-          }
         } else {
           resetMesh(mesh);
         }
       });
     };
 
-    const updateCreatorUI = () => {
-      if (!this.iconMeshes) return;
-      const anyIconVisible = Object.values(this.iconMeshes).some((group) =>
-        group.some((m) => m && m.visible),
-      );
+    // -----------------------
+    // DRAW LISTENERS
+    // -----------------------
+    const addDrawListeners = () => {
+      ["right", "left"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl || ctrl.hasDrawListener) return;
 
-      if (!anyIconVisible && this.selectedIcon) {
-        toggleMeshState(this.selectedIcon, false);
-        if (this.selectedIcon.some((m) => m.name === "Icon-Draw")) {
-          sceneEl.emit("IconDraw-clicked", {
-            active: false,
-            mesh: this.selectedIcon,
-          });
-        }
-        this.selectedIcon = null;
-        setRayVisible(true);
-      }
-
-      if (this.selectedIcon?.some((m) => m.name === "Icon-Draw")) {
-        setRayVisible(false);
-      } else {
-        setRayVisible(true);
-      }
+        ctrl.hasDrawListener = true;
+        ctrl._drawHandler = () => {
+          const drawSystem = sceneEl.components["pointer-draw"];
+          if (!drawSystem?.data.enabled) return;
+          const pos = new THREE.Vector3();
+          ctrl.object3D.getWorldPosition(pos);
+          drawSystem.addDrawPoint(pos);
+        };
+        ctrl.addEventListener("triggerdown", ctrl._drawHandler);
+      });
     };
 
+    const removeDrawListeners = () => {
+      ["right", "left"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl || !ctrl.hasDrawListener) return;
+        ctrl.hasDrawListener = false;
+        ctrl.removeEventListener("triggerdown", ctrl._drawHandler);
+        ctrl._drawHandler = null;
+      });
+    };
+
+    // -----------------------
+    // ACTIVACIÓN / DESACTIVACIÓN ICONOS
+    // -----------------------
+    const activateDraw = () => {
+      const drawPlaneGroup = [
+        ...this.iconMeshes.draw,
+        ...this.iconMeshes.plane,
+      ];
+      toggleMeshState(drawPlaneGroup, true);
+      this.iconState.draw = true;
+      this.iconState.plane = true;
+      this.selectedIcon = drawPlaneGroup;
+      setRayVisible(false);
+      addDrawListeners();
+      sceneEl.emit("IconDraw-clicked", { active: true, mesh: drawPlaneGroup });
+    };
+
+    const deactivateDraw = () => {
+      const drawPlaneGroup = [
+        ...this.iconMeshes.draw,
+        ...this.iconMeshes.plane,
+      ];
+      toggleMeshState(drawPlaneGroup, false);
+      this.iconState.draw = false;
+      this.iconState.plane = false;
+      this.selectedIcon = null;
+      setRayVisible(true);
+      removeDrawListeners();
+      sceneEl.emit("IconDraw-clicked", { active: false, mesh: drawPlaneGroup });
+    };
+
+    const activateEraser = () => {
+      toggleMeshState(this.iconMeshes.eraser, true);
+      this.iconState.eraser = true;
+      this.selectedIcon = this.iconMeshes.eraser;
+      sceneEl.emit("IconErase-clicked", {
+        active: true,
+        mesh: this.iconMeshes.eraser[0],
+      });
+    };
+
+    const deactivateEraser = () => {
+      toggleMeshState(this.iconMeshes.eraser, false);
+      this.iconState.eraser = false;
+      this.selectedIcon = null;
+      sceneEl.emit("IconErase-clicked", {
+        active: false,
+        mesh: this.iconMeshes.eraser[0],
+      });
+    };
+
+    const activateColor = () => {
+      toggleMeshState(this.iconMeshes.color, true);
+      this.iconState.color = true;
+      this.selectedIcon = this.iconMeshes.color;
+      sceneEl.emit("IconColorPicker-clicked", {
+        active: true,
+        mesh: this.iconMeshes.color,
+      });
+    };
+
+    const deactivateColor = () => {
+      toggleMeshState(this.iconMeshes.color, false);
+      this.iconState.color = false;
+      this.selectedIcon = null;
+      sceneEl.emit("IconColorPicker-clicked", {
+        active: false,
+        mesh: this.iconMeshes.color,
+      });
+    };
+
+    // -----------------------
+    // DESACTIVAR TODOS LOS ICONOS
+    // -----------------------
+    const deactivateAllIcons = () => {
+      if (this.iconState.draw) deactivateDraw();
+      if (this.iconState.eraser) deactivateEraser();
+      if (this.iconState.color) deactivateColor();
+      // Plane se desactiva automáticamente con Draw
+    };
+
+    // -----------------------
+    // CONFIGURACIÓN DE ICONOS
+    // -----------------------
     const setupIcons = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
@@ -106,129 +204,99 @@ AFRAME.registerSystem("creator-mode", {
     if (escenario.getObject3D("mesh")) setupIcons();
     escenario.addEventListener("model-loaded", setupIcons);
 
+    // -----------------------
+    // CLICK EN MESH
+    // -----------------------
     sceneEl.addEventListener("mesh-clicked", (evt) => {
       const mesh = evt.detail.mesh;
       if (!mesh) return;
 
+      // CREATOR MENU
       if (mesh.name.startsWith("Btn-creator-menú")) {
         this.creatorModeActive = !this.creatorModeActive;
+
+        if (!this.creatorModeActive) {
+          // Salimos del Creator Mode → desactivamos todo
+          deactivateAllIcons();
+        }
+
         Object.values(this.iconMeshes).forEach((group) =>
           group.forEach((m) => (m.visible = this.creatorModeActive)),
         );
         toggleMeshState(this.creatorMenu, this.creatorModeActive);
-        updateCreatorUI();
+        setRayVisible(!this.creatorModeActive);
         return;
       }
 
-      if (
-        mesh.name.startsWith("Icon") &&
-        Object.values(this.iconMeshes).some((group) =>
-          group.some((m) => m.visible),
-        )
-      ) {
-        let iconGroup = null;
-        let iconKey = null;
-        for (const key in this.iconMeshes) {
-          if (this.iconMeshes[key].some((m) => m === mesh)) {
-            iconGroup = this.iconMeshes[key];
-            iconKey = key;
-            break;
+      const prevSelected = this.selectedIcon;
+
+      // DRAW
+      if (this.iconMeshes.draw.includes(mesh)) {
+        if (this.iconState.draw) deactivateDraw();
+        else {
+          if (prevSelected) {
+            if (prevSelected.includes(this.iconMeshes.eraser[0]))
+              deactivateEraser();
+            else if (prevSelected.includes(this.iconMeshes.color[0]))
+              deactivateColor();
+            else deactivateDraw();
           }
+          activateDraw();
         }
-        if (!iconGroup) return;
+        return;
+      }
 
-        const drawGroup = this.iconMeshes.draw;
-        const planeGroup = this.iconMeshes.plane;
-        const drawPlaneGroup = [...drawGroup, ...planeGroup];
+      // PLANE (solo activo si Draw activo)
+      if (this.iconMeshes.plane.includes(mesh)) {
+        if (!this.iconState.draw) return;
+        this.selectedIcon = [...this.iconMeshes.draw, ...this.iconMeshes.plane];
+        sceneEl.emit("IconPlaneSelector-clicked", { mesh: mesh });
+        return;
+      }
 
-        const prevSelected = this.selectedIcon;
-
-        // ------------------- DRAW -------------------
-        if (iconKey === "draw") {
-          const drawActive = drawPlaneGroup.some((m) => m.userData.active);
-          if (drawActive) {
-            toggleMeshState(drawPlaneGroup, false);
-            sceneEl.emit("IconDraw-clicked", {
-              active: false,
-              mesh: drawPlaneGroup,
-            });
-            this.selectedIcon = null;
-          } else {
-            if (prevSelected && prevSelected !== drawPlaneGroup)
-              toggleMeshState(prevSelected, false);
-            toggleMeshState(drawPlaneGroup, true);
-            sceneEl.emit("IconDraw-clicked", {
-              active: true,
-              mesh: drawPlaneGroup,
-            });
-            this.selectedIcon = drawPlaneGroup;
+      // ERASER
+      if (this.iconMeshes.eraser.includes(mesh)) {
+        if (this.iconState.eraser) deactivateEraser();
+        else {
+          if (prevSelected) {
+            if (prevSelected.includes(this.iconMeshes.draw[0]))
+              deactivateDraw();
+            else if (prevSelected.includes(this.iconMeshes.color[0]))
+              deactivateColor();
           }
-          updateCreatorUI();
-          return;
+          activateEraser();
         }
+        return;
+      }
 
-        // ------------------- PLANE -------------------
-        if (iconKey === "plane") {
-          if (!drawPlaneGroup.some((m) => m.userData.active)) return;
-          toggleMeshState(drawPlaneGroup, true);
-          this.selectedIcon = drawPlaneGroup;
-          updateCreatorUI();
-          sceneEl.emit("IconPlaneSelector-clicked", { mesh: mesh });
-          return;
-        }
-
-        // ------------------- ERASER -------------------
-        if (iconKey === "eraser") {
-          const eraserActive = this.iconMeshes.eraser.some(
-            (m) => m.userData.active,
-          );
-
-          if (eraserActive) {
-            toggleMeshState(this.iconMeshes.eraser, false);
-            sceneEl.emit("IconErase-clicked", { mesh: mesh, active: false });
-            this.selectedIcon = null;
-          } else {
-            if (prevSelected && prevSelected !== this.iconMeshes.eraser)
-              toggleMeshState(prevSelected, false);
-
-            toggleMeshState(this.iconMeshes.eraser, true);
-            sceneEl.emit("IconErase-clicked", { mesh: mesh, active: true });
-            this.selectedIcon = this.iconMeshes.eraser;
+      // COLOR PICKER
+      if (this.iconMeshes.color.includes(mesh)) {
+        if (this.iconState.color) deactivateColor();
+        else {
+          if (prevSelected) {
+            if (prevSelected.includes(this.iconMeshes.draw[0]))
+              deactivateDraw();
+            else if (prevSelected.includes(this.iconMeshes.eraser[0]))
+              deactivateEraser();
           }
-          updateCreatorUI();
-          return;
+          activateColor();
         }
-
-        // ------------------- OTROS ICONOS -------------------
-        if (prevSelected && prevSelected !== iconGroup)
-          toggleMeshState(prevSelected, false);
-        const isActive = !iconGroup.some((m) => m.userData.active);
-        toggleMeshState(iconGroup, isActive);
-        this.selectedIcon = isActive ? iconGroup : null;
-        updateCreatorUI();
         return;
       }
     });
 
-    // ==========================
+    // -----------------------
     // TICK VR (DIBUJO)
-    // ==========================
+    // -----------------------
     this.tick = () => {
-      if (!this.selectedIcon?.some((m) => m.name === "Icon-Draw")) return;
+      if (!this.iconState.draw) return;
       const drawSystem = sceneEl.components["pointer-draw"];
       if (!drawSystem) return;
 
       ["right", "left"].forEach((hand) => {
         const ctrl = document.querySelector(`#controller-${hand}`);
         if (!ctrl || ctrl.hasDrawListener) return;
-
-        ctrl.hasDrawListener = true;
-        ctrl.addEventListener("triggerdown", () => {
-          if (!drawSystem.data.enabled) return;
-          const pos = new THREE.Vector3();
-          ctrl.object3D.getWorldPosition(pos);
-          drawSystem.addDrawPoint(pos);
-        });
+        addDrawListeners();
       });
     };
   },
@@ -242,9 +310,6 @@ AFRAME.registerSystem("creator-mode", {
   },
 });
 
-/* ==========================
-POINTER DRAW COMPONENT OPTIMIZADO PARA VR + MODO PLANE SELECTOR 
-========================== */
 /* ==========================
 POINTER DRAW COMPONENT OPTIMIZADO PARA VR + MODO PLANE SELECTOR
 ========================== */
@@ -264,6 +329,7 @@ AFRAME.registerComponent("pointer-draw", {
     this.drawGroup = new THREE.Group();
     this.drawGroup.name = "DrawGroup";
     this.handTriggerDown = { right: false, left: false };
+    this.currentColor = 0xff0000; // 🔹 Color inicial rojo
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -291,10 +357,22 @@ AFRAME.registerComponent("pointer-draw", {
     });
 
     // -------------------------
+    // Cambiar color dinámicamente
+    // -------------------------
+    this.setDrawColor = (colorHex) => {
+      // 🔹 Si hay línea en curso, la finalizamos
+      if (this.currentLine) {
+        this.currentPoints = null;
+        this.currentLine = null;
+        this.currentMesh = null;
+      }
+      this.currentColor = colorHex;
+    };
+
+    // -------------------------
     // Añadir punto al dibujo
     // -------------------------
     this.addDrawPoint = (point, mesh) => {
-      // 🔹 Si no hay punto o mesh, finalizamos línea
       if (!point || !mesh) {
         this.currentPoints = null;
         this.currentLine = null;
@@ -302,7 +380,6 @@ AFRAME.registerComponent("pointer-draw", {
         return;
       }
 
-      // 🔹 Si cambiamos de mesh, finalizamos línea anterior
       if (this.currentMesh && mesh !== this.currentMesh) {
         this.currentPoints = [];
         this.currentLine = null;
@@ -326,20 +403,17 @@ AFRAME.registerComponent("pointer-draw", {
       );
 
       const material = new THREE.LineBasicMaterial({
-        color: 0xff0000,
+        color: this.currentColor, // 🔹 ahora dinámico
       });
 
       this.currentLine = new THREE.Line(geometry, material);
 
-      /* -------------------------------------------------
-      NUEVO BLOQUE
-      Guardamos metadata de la línea para poder editar,
-      seleccionar o exportar el dibujo más adelante
-      ------------------------------------------------- */
+      // 🔹 Metadata para edición, selección o exportación
       this.currentLine.userData = {
         type: "draw-line",
         points: this.currentPoints.slice(),
         createdAt: Date.now(),
+        color: this.currentColor,
       };
 
       this.drawGroup.add(this.currentLine);
@@ -366,41 +440,33 @@ AFRAME.registerComponent("pointer-draw", {
       /* ---------- GROUND ---------- */
       if (type === "ground") {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
           raycaster.ray.intersectPlane(plane, pos);
         } else {
           ctrlOrPointer.object3D.getWorldPosition(pos);
         }
-
-        intersectedMesh = escenario.getObject3D("mesh"); // todo el escenario como “mesh”
-
+        intersectedMesh = escenario.getObject3D("mesh");
         return { point: pos, mesh: intersectedMesh };
       }
 
-      /* ---------- WALL / OBJETO AÑADIDO ---------- */
+      /* ---------- WALL / OBJETO ---------- */
       if (type === "wall") {
         const modelRoot = escenario.getObject3D("mesh");
         if (!modelRoot) return { point: null, mesh: null };
 
-        // 🔹 Cache de meshes válidos
         if (!this._wallMeshes) {
           this._wallMeshes = [];
-
           modelRoot.traverse((child) => {
             if (!child.isMesh || !child.name) return;
-
             const name = child.name.toLowerCase();
-
             if (
               name.startsWith("walls") ||
               name === "selfnotemesh" ||
               name === "objetoañadido" ||
               name === "mybackground"
-            ) {
+            )
               this._wallMeshes.push(child);
-            }
           });
         }
 
@@ -410,20 +476,16 @@ AFRAME.registerComponent("pointer-draw", {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
         } else {
           const origin = new THREE.Vector3();
-          ctrlOrPointer.object3D.getWorldPosition(origin);
-
           const direction = new THREE.Vector3();
+          ctrlOrPointer.object3D.getWorldPosition(origin);
           ctrlOrPointer.object3D.getWorldDirection(direction);
-
           raycaster.set(origin, direction);
         }
 
         const intersects = raycaster.intersectObjects(this._wallMeshes, true);
-
         if (intersects.length > 0) {
           intersectedMesh = intersects[0].object;
           pos.copy(intersects[0].point);
-
           return { point: pos, mesh: intersectedMesh };
         }
 
@@ -434,26 +496,19 @@ AFRAME.registerComponent("pointer-draw", {
       if (type === "3D") {
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
-
           const distance = 0.2;
-
           pos
             .copy(raycaster.ray.origin)
             .add(raycaster.ray.direction.clone().multiplyScalar(distance));
         } else {
           const origin = new THREE.Vector3();
           const direction = new THREE.Vector3();
-
           ctrlOrPointer.object3D.getWorldPosition(origin);
           ctrlOrPointer.object3D.getWorldDirection(direction);
-
           const distance = 0.2;
-
           pos.copy(origin).add(direction.multiplyScalar(distance));
         }
-
         intersectedMesh = escenario.getObject3D("mesh");
-
         return { point: pos, mesh: intersectedMesh };
       }
 
@@ -465,7 +520,6 @@ AFRAME.registerComponent("pointer-draw", {
     // -------------------------
     const onPointerDown = () => {
       if (!this.data.enabled) return;
-
       this.isPointerDown = true;
       this.currentPoints = [];
       this.currentLine = null;
@@ -481,16 +535,12 @@ AFRAME.registerComponent("pointer-draw", {
 
     const onPointerMove = (e) => {
       if (!this.data.enabled || !this.isPointerDown) return;
-
       const rect = sceneEl.canvas.getBoundingClientRect();
-
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
       pointer.isVector2 = true;
 
       const { point, mesh } = this.getDrawPosition(pointer);
-
       this.addDrawPoint(point, mesh);
     };
 
@@ -509,12 +559,10 @@ AFRAME.registerComponent("pointer-draw", {
     // -------------------------
     ["right", "left"].forEach((hand) => {
       const controller = document.querySelector(`#controller-${hand}`);
-
       if (!controller) return;
 
       controller.addEventListener("triggerdown", () => {
         this.handTriggerDown[hand] = true;
-
         this.currentPoints = [];
         this.currentLine = null;
         this.currentMesh = null;
@@ -522,7 +570,6 @@ AFRAME.registerComponent("pointer-draw", {
 
       controller.addEventListener("triggerup", () => {
         this.handTriggerDown[hand] = false;
-
         this.currentPoints = null;
         this.currentLine = null;
         this.currentMesh = null;
@@ -535,13 +582,9 @@ AFRAME.registerComponent("pointer-draw", {
 
     ["right", "left"].forEach((hand) => {
       if (!this.handTriggerDown[hand]) return;
-
       const controller = document.querySelector(`#controller-${hand}`);
-
       if (!controller) return;
-
       const { point, mesh } = this.getDrawPosition(controller);
-
       this.addDrawPoint(point, mesh);
     });
   },
@@ -986,7 +1029,7 @@ POINTER ERASER COMPONENT
 AFRAME.registerComponent("pointer-eraser", {
   schema: {
     enabled: { type: "boolean", default: false },
-    radius: { type: "number", default: 0.1 },
+    radius: { type: "number", default: 0.045 },
   },
 
   init: function () {
@@ -1090,6 +1133,82 @@ AFRAME.registerComponent("pointer-eraser", {
         line.geometry.setFromPoints(newPoints);
         line.geometry.attributes.position.needsUpdate = true;
       }
+    });
+  },
+});
+
+
+/* ========================== 
+COLOR PICKER COMPONENT
+========================== */
+AFRAME.registerComponent("color-picker", {
+  init: function () {
+  },
+});
+
+/* ========================== 
+COLOR WHEEL COMPONENT
+========================== */
+AFRAME.registerComponent("color-wheel", {
+  init: function () {
+    const size = 512;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext("2d");
+
+    const radius = size / 2;
+
+    for (let angle = 0; angle < 360; angle++) {
+      const start = ((angle - 1) * Math.PI) / 180;
+      const end = (angle * Math.PI) / 180;
+
+      ctx.beginPath();
+      ctx.moveTo(radius, radius);
+      ctx.arc(radius, radius, radius, start, end);
+      ctx.closePath();
+
+      ctx.fillStyle = `hsl(${angle},100%,50%)`;
+      ctx.fill();
+    }
+
+    const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(1, "transparent");
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    this.el.setAttribute("material", {
+      src: canvas,
+      shader: "flat",
+      side: "double"
+    });
+
+    /* DETECTOR DE COLOR */
+    this.el.addEventListener("click", (evt) => {
+
+      if (!evt.detail.intersection) return;
+
+      const uv = evt.detail.intersection.uv;
+
+      const x = Math.floor(uv.x * size);
+      const y = Math.floor((1 - uv.y) * size);
+
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+
+      const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+
+      const draw = document.querySelector("[pointer-draw]");
+
+      if (draw && draw.components["pointer-draw"]) {
+        draw.components["pointer-draw"].currentColor = color;
+      }
+
+      console.log("Color seleccionado:", color);
+
     });
   },
 });

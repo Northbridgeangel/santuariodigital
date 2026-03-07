@@ -123,7 +123,7 @@
     <!--  EL PROYECTO  -->
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
-        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo fly-mode vr-controls>
+        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser fly-mode vr-controls>
         <!-- Fondo -->
         <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
@@ -165,6 +165,12 @@
         <!-- GLB cargado como escenario estático -->
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             click-hover-detector="maxDistance: 5" check-door></a-entity>
+
+        <a-entity color-picker position="0 1.5 -1">
+        </a-entity>
+
+        <a-circle color-wheel radius="0.35" position="0 1.5 -1">
+        </a-circle>
 
         <!-- Indicador moviendo: Checkdoor-FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
