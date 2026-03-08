@@ -1143,6 +1143,52 @@ COLOR PICKER COMPONENT
 ========================== */
 AFRAME.registerComponent("color-picker", {
   init: function () {
+    // Referencias a elementos
+    const wheelEl = document.createElement("a-entity");
+    wheelEl.setAttribute("color-wheel", "");
+    this.el.appendChild(wheelEl);
+
+    this.wheel = wheelEl.components["color-wheel"];
+
+    // Estado inicial
+    this.active = false;
+
+    // Función para mostrar/ocultar picker
+    this.toggle = (state) => {
+      this.active = state;
+      if (this.wheel) this.wheel.setActive(state);
+    };
+
+    // Eventos del icono del Creator Mode
+    const sceneEl = this.el.sceneEl;
+
+    // Cuando el icono de color es clicado
+    sceneEl.addEventListener("IconColorPicker-clicked", (evt) => {
+      this.toggle(!!evt.detail.active);
+    });
+
+    // Cuando se cierra el Creator Mode
+    sceneEl.addEventListener("creator-mode-toggled", (evt) => {
+      if (!evt.detail.active) this.toggle(false);
+    });
+
+    // Actualización del color en tiempo real (opcional)
+    sceneEl.addEventListener("wheel-color-selected", (evt) => {
+      const draw = document.querySelector("[pointer-draw]");
+      if (draw && draw.components["pointer-draw"]) {
+        draw.components["pointer-draw"].currentColor = evt.detail.color;
+      }
+    });
+
+    // Posicionamiento del wheel cerca del cursor o controlador VR
+    this.el.addEventListener("mouseenter", (evt) => {
+      if (!this.active) return;
+      // Posicionar wheel frente al usuario
+      const camera = sceneEl.camera.el;
+      const camPos = camera.object3D.position;
+      wheelEl.object3D.position.set(camPos.x, camPos.y - 0.2, camPos.z - 0.5);
+      wheelEl.object3D.lookAt(camPos);
+    });
   },
 });
 
@@ -1152,63 +1198,84 @@ COLOR WHEEL COMPONENT
 AFRAME.registerComponent("color-wheel", {
   init: function () {
     const size = 512;
-
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
-
     const ctx = canvas.getContext("2d");
-
     const radius = size / 2;
 
+    // Rueda de color
     for (let angle = 0; angle < 360; angle++) {
       const start = ((angle - 1) * Math.PI) / 180;
       const end = (angle * Math.PI) / 180;
-
       ctx.beginPath();
       ctx.moveTo(radius, radius);
       ctx.arc(radius, radius, radius, start, end);
       ctx.closePath();
-
       ctx.fillStyle = `hsl(${angle},100%,50%)`;
       ctx.fill();
     }
 
-    const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+    // Gradiente central
+    const grad = ctx.createRadialGradient(
+      radius,
+      radius,
+      0,
+      radius,
+      radius,
+      radius,
+    );
     grad.addColorStop(0, "white");
     grad.addColorStop(1, "transparent");
-
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
 
+    // Asignar material
     this.el.setAttribute("material", {
       src: canvas,
       shader: "flat",
-      side: "double"
+      side: "double",
+      transparent: true,
     });
 
-    /* DETECTOR DE COLOR */
+    // Estado inicial
+    this.active = false;
+    this.el.object3D.visible = false;
+
+    // Función pública para toggle
+    this.setActive = (state) => {
+      this.active = state;
+      this.el.object3D.visible = state;
+    };
+
+    // Detector de color
     this.el.addEventListener("click", (evt) => {
-
       if (!evt.detail.intersection) return;
-
       const uv = evt.detail.intersection.uv;
-
       const x = Math.floor(uv.x * size);
       const y = Math.floor((1 - uv.y) * size);
-
       const pixel = ctx.getImageData(x, y, 1, 1).data;
-
       const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
 
       const draw = document.querySelector("[pointer-draw]");
-
       if (draw && draw.components["pointer-draw"]) {
         draw.components["pointer-draw"].currentColor = color;
       }
 
       console.log("Color seleccionado:", color);
+    });
 
+    // Escuchar eventos de icon-picker
+    const sceneEl = this.el.sceneEl;
+    sceneEl.addEventListener("IconColorPicker-clicked", (evt) => {
+      this.setActive(!!evt.detail.active);
+    });
+
+    // Ocultar wheel si se cierra Creator Mode
+    sceneEl.addEventListener("creator-mode-toggled", (evt) => {
+      if (!evt.detail.active) {
+        this.setActive(false);
+      }
     });
   },
 });

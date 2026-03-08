@@ -166,11 +166,9 @@
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             click-hover-detector="maxDistance: 5" check-door></a-entity>
 
-        <a-entity color-picker position="0 1.5 -1">
+        <a-entity color-picker>
+            <a-circle color-wheel radius="0.1" position="-0.0075 0.25 0" rotation="0 90 0"></a-circle>
         </a-entity>
-
-        <a-circle color-wheel radius="0.35" position="0 1.5 -1">
-        </a-circle>
 
         <!-- Indicador moviendo: Checkdoor-FlightMode / Wings -->
         <a-entity id="hud-wings" position="0.44 0.98 3.015">
