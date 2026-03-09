@@ -1,6 +1,9 @@
 // Embellecedor.js
 function resaltarMesh(mesh) {
   if (!mesh || !mesh.material) return;
+  // 🚪 No resaltar puertas
+  if (/door|puerta/i.test(mesh.name)) return;
+  
   if (mesh.material.emissive) mesh.material.emissive.setHex(0xff0000); // brillo rojo
 }
 

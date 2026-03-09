@@ -38,7 +38,7 @@ AFRAME.registerSystem("InteractionSystem", {
       modelRoot.traverse((child) => {
         if (!child.isMesh || child.name.startsWith("Escena")) return;
 
-        if (/transparentfloor|floor|ground/i.test(child.name)) {
+        if (/transparentfloor|floor|ground|wall/i.test(child.name)) {
           //console.log(`🟡 Ignorando mesh del suelo: ${child.name}`);
           child.userData.clickable = false;
           return;
