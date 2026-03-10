@@ -18,8 +18,7 @@ AFRAME.registerComponent("mirror-material", {
         mesh.traverse((child) => {
           if (!child.isMesh || !child.material) return;
 
-          
-         // 🪞 ESPEJO (tu material original)
+          // 🪞 ESPEJO (tu material original)
           if (child.material.name === "Espejo") {
             child.material = new THREE.MeshStandardMaterial({
               color: 0xffffff,
@@ -28,28 +27,29 @@ AFRAME.registerComponent("mirror-material", {
               envMap: texture,
               envMapIntensity: 1.5,
             });
-
             //console.log("✅ Material espejo aplicado");
-
-           
           }
-          
-          // ✨ CRISTAL DORADO ESPEJADO
-          if (child.material.name === "Cristal dorado") {
-            child.material = new THREE.MeshPhysicalMaterial({
-              color: 0xbfa15a,
-              metalness: 0.05,
-              roughness: 0.02,
-              transmission: 1.0,
-              thickness: 0.2,
-              ior: 1.52,
-              envMap: texture,
-              envMapIntensity: 2.5,
-              transparent: true,
-              opacity: 0.92,
-            });
 
-            //console.log("✨ Cristal dorado aplicado");
+          // ✨ CRISTAL DORADO ESPEJADO
+          // Aplicar a cualquier material que contenga "Cristal dorado" en su nombre
+          if (child.material.name.includes("Cristal dorado")) {
+            child.material.color.set(0xbfa15a);
+            child.material.metalness = 0.05;
+            child.material.roughness = 0.02;
+            child.material.transmission = 1.0;
+            child.material.thickness = 0.2;
+            child.material.ior = 1.52;
+            child.material.envMap = texture;
+            child.material.envMapIntensity = 2.5;
+            child.material.transparent = true;
+            child.material.opacity = 0.92;
+
+            // Si el material no es físico todavía, lo reemplazamos
+            if (!(child.material instanceof THREE.MeshPhysicalMaterial)) {
+              child.material = new THREE.MeshPhysicalMaterial(child.material);
+            }
+
+            //console.log("✨ Cristal dorado espejado aplicado");
           }
         });
 

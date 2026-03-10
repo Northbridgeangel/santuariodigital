@@ -9,13 +9,18 @@
     <!-- A-Frame 1.5.0 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
+    <!-- Asegúrate de incluir este script ANTES de usar <a-entity spe-particles> -->
+    <script
+        src="https://cdn.jsdelivr.net/gh/c-frame/aframe-particle-system-component@1.1.4/dist/aframe-particle-system-component.min.js"></script>
+<script
+    src="https://unpkg.com/aframe-sprite-particles-component@0.5.4/dist/aframe-sprite-particles-component.js"></script>
+
     <!-- Componente para texto 3D con volumen -->
     <script
         src="https://unpkg.com/aframe-text-geometry-component@0.5.2/dist/aframe-text-geometry-component.min.js"></script>
 
     <!-- Troika Text para A-Frame -->
     <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
-
 
     <!-- Componentes custom -->
     <script type="module" src="./js/Main.js"></script>
@@ -27,6 +32,7 @@
     <script src="./js/controls/vr-controls.js"></script>
     <script src="./js/controls/fly-mode.js"></script>
     <script src="./js/components/activate-ar.js"></script>
+    <script src="./js/components/revelation-mode.js"></script>
     <script src="./js/components/changenote.js"></script>
     <script src="./js/components/uploadimg.js"></script>
     <script src="./js/components/check-player.js"></script>
@@ -125,14 +131,14 @@
     <!--  EL PROYECTO  -->
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
-        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" vr-controls>
+        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls>
         <!-- Fondo -->
         <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
         <!-- Luz principal -->
         <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
-
+       
         <!-- RIG que agrupa movimiento + cámara -->
         <a-entity id="rig" vr-scale-rig position="0 0 0" check-player touch-hold
             scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
@@ -222,6 +228,13 @@
             <!-- Aquí se podrán añadir otros indicadores del HUD -->
         </a-entity>
 
+        <!-- Partículas multicolor flotando en la escena -->
+        <a-entity particle-system="preset: snow; color: #FF0000, #FFFFFF; particleCount: 500" visible="false"></a-entity>
+        
+        <a-entity id="magic-particles" visible="false" position="0 0 0"
+            particle-system="preset: snow; particleCount: 300; size: 2.5; velocityValue: 0 0.05 0; color: #FF0000,#00FF00,#0000FF;"></a-entity>
+       
+            <a-entity visible="false" sprite-particles="texture: url(./assets/blob.png); velocity: .1 1 .1; color: red,#FF0;"></a-entity>
     </a-scene>
 </body>
 

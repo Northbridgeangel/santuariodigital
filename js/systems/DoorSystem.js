@@ -119,33 +119,36 @@ AFRAME.registerComponent("check-door", {
   // 3️⃣ HUD INIT (solo portales con materiales reales)
   // ==========================
   initializeHUD: function () {
-  // Wings
-  this.hudWings = document.querySelector("#hud-wings");
-  this.hudText = document.querySelector("#hud-wings-text");
-  this.wingsMaterial = this.getMaterialByName("Alabastro blanco");
+    // Wings
+    this.hudWings = document.querySelector("#hud-wings");
+    this.hudText = document.querySelector("#hud-wings-text");
+    this.wingsMaterial = this.getMaterialByName("Alabastro blanco");
 
-  if (this.hudWings && this.hudText) {
-    this.updateHUD(this.hudWings, this.hudText, "OFF", this.wingsMaterial);
-  }
+    if (this.hudWings && this.hudText) {
+      this.updateHUD(this.hudWings, this.hudText, "OFF", this.wingsMaterial);
+    }
 
-  // Cube
-  this.hudCube = document.querySelector("#hud-cube");
-  this.hudCubeText = document.querySelector("#hud-cube-text");
-  this.cubeMaterial = this.getMaterialByName("Alabastro rosa");
+    // Cube
+    this.hudCube = document.querySelector("#hud-cube");
+    this.hudCubeText = document.querySelector("#hud-cube-text");
+    this.cubeMaterial = this.getMaterialByName("Alabastro rosa");
 
-  if (this.hudCube && this.hudCubeText) {
-    this.updateHUD(this.hudCube, this.hudCubeText, "OFF", this.cubeMaterial);
-  }
+    if (this.hudCube && this.hudCubeText) {
+      this.updateHUD(this.hudCube, this.hudCubeText, "OFF", this.cubeMaterial);
+    }
 
-  // Stars (dejamos comentado por ahora)
-  /*
-  this.hudStars = document.querySelector("#hud-stars");
-  this.hudStarsText = document.querySelector("#hud-stars-text");
-  this.starsMaterial = this.getMaterialByName("Cristal dorado");
-  if (this.hudStars && this.hudStarsText) {
-      this.updateHUD(this.hudStars, this.hudStarsText, "OFF", this.starsMaterial);
-  }
-  */
+    // Stars
+    this.hudStars = document.querySelector("#hud-stars");
+    this.hudStarsText = document.querySelector("#hud-stars-text");
+    this.starsMaterial = this.getMaterialByName("Cristal dorado");
+    if (this.hudStars && this.hudStarsText) {
+      this.updateHUD(
+        this.hudStars,
+        this.hudStarsText,
+        "OFF",
+        this.starsMaterial,
+      );
+    }
   },
 
   // ==========================
@@ -155,7 +158,9 @@ AFRAME.registerComponent("check-door", {
     let foundMat = null;
     this.el.sceneEl.object3D.traverse((obj) => {
       if (obj.isMesh) {
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const mats = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
         mats.forEach((mat) => {
           if (mat.name === materialName) foundMat = mat;
         });
@@ -172,7 +177,8 @@ AFRAME.registerComponent("check-door", {
 
     hud.object3D.traverse((obj) => {
       if (obj.isMesh) {
-        obj.material = material.clone(); // clonamos para no tocar el original
+        // Usamos el material directamente (no clone)
+        obj.material = material;
         obj.material.opacity = state === "ON" ? 1 : 0.5;
         obj.material.needsUpdate = true;
       }
@@ -239,32 +245,36 @@ AFRAME.registerComponent("check-door", {
         if (isIntersecting && !collider.lastIntersection) {
           collider.triggered = !collider.triggered;
 
-          if (collider.name === "Portal_blanco_collider") {
-            this.updateHUD(
-              this.hudWings,
-              this.hudText,
-              collider.triggered ? "ON" : "OFF",
-              this.wingsMaterial,
-            );
-            const flyComp = this.el.sceneEl.components["fly-mode"];
-            if (flyComp) flyComp.toggleFlyMode();
+          switch (collider.name) {
+            case "Portal_blanco_collider":
+              this.updateHUD(
+                this.hudWings,
+                this.hudText,
+                collider.triggered ? "ON" : "OFF",
+                this.wingsMaterial,
+              );
+              this.el.sceneEl.components["fly-mode"]?.toggleFlyMode();
+              break;
+            case "Portal_alabastro_collider":
+              this.updateHUD(
+                this.hudCube,
+                this.hudCubeText,
+                collider.triggered ? "ON" : "OFF",
+                this.cubeMaterial,
+              );
+              this.el.sceneEl.components["activate-ar"]?.toggleAR();
+              break;
+            case "Portal_dorado_collider":
+              this.updateHUD(
+                this.hudStars,
+                this.hudStarsText,
+                collider.triggered ? "ON" : "OFF",
+                this.starsMaterial,
+              );
+              // 🔹 Activar la revelación de partículas
+              this.el.sceneEl.components["revelation-mode"]?.toggleRevelation();
+              break;
           }
-
-          if (collider.name === "Portal_alabastro_collider") {
-            this.updateHUD(
-              this.hudCube,
-              this.hudCubeText,
-              collider.triggered ? "ON" : "OFF",
-              this.cubeMaterial,
-            );
-            const arComp = this.el.sceneEl.components["activate-ar"];
-            if (arComp) arComp.toggleAR();
-          }
-
-          // Para Stars (de momento comentado)
-          // if (collider.name === "Portal_dorado_collider") {
-          //   this.updateHUD(this.hudStars, this.hudStarsText, collider.triggered ? "ON" : "OFF", this.starsMaterial);
-          // }
         }
       }
 
