@@ -1,13 +1,8 @@
-/* ==========================
-UPLOAD IMG COMPONENT 
-========================== */
-
 AFRAME.registerComponent("upload-wall-texture", {
   init: function () {
     const sceneEl = this.el.sceneEl;
     const OG = window.OpenCentralGlobals;
 
-    // Lista de meshes que pueden recibir imágenes
     const highlightableNames = [
       "Objetoañadido",
       "Muro_hab_salida",
@@ -23,16 +18,17 @@ AFRAME.registerComponent("upload-wall-texture", {
       "MyEntrance_gal",
     ];
 
-    // Estado interno
-    this.selecting = false; // indica si estamos esperando que el usuario seleccione una pared
-    this.selectableMeshes = []; // meshes que se pueden seleccionar
-    this.targetMesh = null; // mesh que finalmente el usuario elige
+    this.selecting = false;
+    this.selectableMeshes = [];
+    this.targetMesh = null;
+
+    // NUEVO: textura pendiente
+    this.pendingTexture = null;
 
     /* -----------------------------
        FILE INPUT OCULTO
-       ----------------------------- */
+    ----------------------------- */
 
-    // Creamos un input invisible para subir imágenes
     this.fileInput = document.createElement("input");
     this.fileInput.type = "file";
     this.fileInput.accept = "image/*";
@@ -41,43 +37,32 @@ AFRAME.registerComponent("upload-wall-texture", {
 
     /* -----------------------------
        TEXTURA DE PREGUNTA
-       ----------------------------- */
+    ----------------------------- */
 
-    // Textura que se aplicará a las paredes que se pueden elegir
     const loader = new THREE.TextureLoader();
     const questionTexture = loader.load("assets/Textura-de-pregunta.png");
-
-    // Necesario para modelos GLTF
     questionTexture.flipY = false;
 
     /* -----------------------------
-       EVENTO PRINCIPAL DE CLICK
-       ----------------------------- */
+       EVENTO CLICK EN MESH
+    ----------------------------- */
 
     sceneEl.addEventListener("mesh-clicked", (event) => {
       const mesh = event.detail?.mesh;
       if (!mesh) return;
 
       /* --------------------------------------------------
-         1️⃣ CLICK EN BOTÓN SUBIR IMAGEN
-         -------------------------------------------------- */
+         1️⃣ CLICK BOTÓN SUBIR IMAGEN
+      -------------------------------------------------- */
 
       if (mesh.name === "Btn-upload-img") {
         this.selecting = true;
 
-        // Buscamos meshes válidas PERO ignoramos las que ya tienen imagen subida
         this.selectableMeshes = OG.core.interactiveMeshes.filter(
-          (m) => highlightableNames.includes(m.name) && !m.userUploadedTexture, // 🔵 evita sobrescribir imágenes ya subidas
+          (m) => highlightableNames.includes(m.name) && !m.userUploadedTexture,
         );
 
-        console.log(
-          "🖼 Aplicando textura de pregunta a:",
-          this.selectableMeshes.map((m) => m.name),
-        );
-
-        // Aplicamos textura de "pregunta" a todas las seleccionables
         this.selectableMeshes.forEach((m) => {
-          // guardamos material original si aún no lo habíamos hecho
           if (!m.originalMaterial) {
             m.originalMaterial = m.material.clone();
           }
@@ -89,56 +74,62 @@ AFRAME.registerComponent("upload-wall-texture", {
           m.material = newMaterial;
         });
 
+        // 👇 ABRIMOS SELECTOR EN EL GESTO DEL USUARIO
+        this.fileInput.click();
+
         return;
       }
 
       /* --------------------------------------------------
-         2️⃣ SI ESTAMOS EN MODO SELECCIÓN
-         -------------------------------------------------- */
+         2️⃣ SELECCIÓN DE PARED
+      -------------------------------------------------- */
 
       if (this.selecting) {
         const clickedSelectable = this.selectableMeshes.includes(mesh);
 
-        /* -----------------------------
-           CLICK FUERA DE LAS PAREDES
-           ----------------------------- */
-
         if (!clickedSelectable) {
-          //console.log("❌ Click fuera, cancelando selección");
-
           this.resetMaterials();
           this.selecting = false;
+
           return;
         }
-
-        /* -----------------------------
-           CLICK EN PARED VÁLIDA
-           ----------------------------- */
-
-        //console.log("✅ Mesh seleccionada:", mesh.name);
 
         this.targetMesh = mesh;
         this.selecting = false;
 
-        // Restauramos las demás paredes
         this.selectableMeshes.forEach((m) => {
           if (m !== mesh && m.originalMaterial) {
             m.material = m.originalMaterial;
           }
         });
 
-        // Abrimos selector de archivos
-        this.fileInput.click();
+        /* --------------------------------------------------
+           3️⃣ SI YA TENEMOS IMAGEN → APLICAR TEXTURA
+        -------------------------------------------------- */
+
+        if (this.pendingTexture) {
+          const mat = this.targetMesh.material.clone();
+
+          mat.map = this.pendingTexture;
+          mat.needsUpdate = true;
+
+          this.targetMesh.material = mat;
+
+          this.targetMesh.userUploadedTexture = true;
+
+          this.pendingTexture = null;
+          this.targetMesh = null;
+        }
       }
     });
 
     /* --------------------------------------------------
-       3️⃣ CUANDO EL USUARIO ELIGE UNA IMAGEN
-       -------------------------------------------------- */
+       CUANDO EL USUARIO ELIGE IMAGEN
+    -------------------------------------------------- */
 
     this.fileInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
-      if (!file || !this.targetMesh) return;
+      if (!file) return;
 
       const reader = new FileReader();
 
@@ -146,26 +137,17 @@ AFRAME.registerComponent("upload-wall-texture", {
         const img = new Image();
 
         img.onload = () => {
-          // Creamos textura desde la imagen
           const texture = new THREE.Texture(img);
+
           texture.flipY = false;
           texture.needsUpdate = true;
 
-          // Clonamos material del mesh
-          const mat = this.targetMesh.material.clone();
-          mat.map = texture;
-          mat.needsUpdate = true;
+          // mejora visual
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = 4;
 
-          // Aplicamos nueva textura
-          this.targetMesh.material = mat;
-
-          // 🔵 MARCAMOS ESTA MALLA COMO EDITADA
-          // Así no volverá a recibir la textura de pregunta
-          this.targetMesh.userUploadedTexture = true;
-
-          //console.log("🎨 Textura aplicada a:", this.targetMesh.name);
-
-          this.targetMesh = null;
+          // guardamos textura pendiente
+          this.pendingTexture = texture;
         };
 
         img.src = event.target.result;
@@ -173,14 +155,13 @@ AFRAME.registerComponent("upload-wall-texture", {
 
       reader.readAsDataURL(file);
 
-      // limpiamos input para permitir subir otra imagen después
       this.fileInput.value = "";
     });
   },
 
   /* --------------------------------------------------
-     RESTAURAR MATERIALES ORIGINALES
-     -------------------------------------------------- */
+     RESTAURAR MATERIALES
+  -------------------------------------------------- */
 
   resetMaterials: function () {
     this.selectableMeshes.forEach((m) => {
