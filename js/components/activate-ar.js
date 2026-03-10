@@ -44,10 +44,7 @@ AFRAME.registerComponent("activate-ar", {
   async enableAR() {
     console.log("📷 Activando AR");
 
-    if (this.sky) {
-      this.sky.object3D.visible = false;
-      console.log("🌌 Sky ocultado");
-    }
+    if (this.sky) this.sky.object3D.visible = false;
 
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -59,6 +56,9 @@ AFRAME.registerComponent("activate-ar", {
       video.setAttribute("playsinline", "");
       video.srcObject = this.stream;
       this.video = video;
+
+      // En móviles: asegurar reproducción
+      await video.play();
 
       const texture = new THREE.VideoTexture(video);
       this.scene.object3D.background = texture;
