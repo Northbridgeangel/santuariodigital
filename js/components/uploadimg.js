@@ -104,7 +104,7 @@ AFRAME.registerComponent("upload-wall-texture", {
            ----------------------------- */
 
         if (!clickedSelectable) {
-          console.log("❌ Click fuera, cancelando selección");
+          //console.log("❌ Click fuera, cancelando selección");
 
           this.resetMaterials();
           this.selecting = false;
@@ -115,7 +115,7 @@ AFRAME.registerComponent("upload-wall-texture", {
            CLICK EN PARED VÁLIDA
            ----------------------------- */
 
-        console.log("✅ Mesh seleccionada:", mesh.name);
+        //console.log("✅ Mesh seleccionada:", mesh.name);
 
         this.targetMesh = mesh;
         this.selecting = false;
@@ -163,7 +163,7 @@ AFRAME.registerComponent("upload-wall-texture", {
           // Así no volverá a recibir la textura de pregunta
           this.targetMesh.userUploadedTexture = true;
 
-          console.log("🎨 Textura aplicada a:", this.targetMesh.name);
+          //console.log("🎨 Textura aplicada a:", this.targetMesh.name);
 
           this.targetMesh = null;
         };

@@ -28,7 +28,7 @@ AFRAME.registerComponent("changenote", {
         window.OpenCentralGlobals.core.interactiveMeshes.push(this.noteMeshes.Btn);
       }
 
-      console.log("🟢 Carteles inicializados y registrados VR/mouse");
+      //console.log("🟢 Carteles inicializados y registrados VR/mouse");
     };
 
     if (escenario.getObject3D("mesh")) setupNotes();

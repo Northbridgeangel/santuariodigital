@@ -22,13 +22,7 @@ AFRAME.registerComponent("check-door", {
     this.playerComp = null;
 
     // ==========================
-    // 2️⃣ HUD Wings (solo portales)
-    // ==========================
-    this.hudWings = document.querySelector("#hud-wings");
-    this.hudText = document.querySelector("#hud-wings-text");
-
-    // ==========================
-    // 3️⃣ Esperar core listo
+    // 2️⃣ Esperar core listo
     // ==========================
     window.OpenCentralGlobals.core.sceneEl.addEventListener(
       "open-globals-ready",
@@ -96,10 +90,10 @@ AFRAME.registerComponent("check-door", {
             anchoLocal,
           };
 
-          console.log(`🚪 Puerta vinculada: ${door.name}`);
+          /*console.log(`🚪 Puerta vinculada: ${door.name}`);
           console.log("📏 LOCAL SIZE:", size);
           console.log("📐 Eje ancho:", ejeAncho);
-          console.log("📐 Ancho local:", anchoLocal);
+          console.log("📐 Ancho local:", anchoLocal);*/
         }
       }
 
@@ -113,49 +107,78 @@ AFRAME.registerComponent("check-door", {
       });
     });
 
-    console.log(
+    /*console.log(
       "🚪 check-door inicializado | Colliders:",
       this.colliders.map((c) => c.name),
-    );
+    );*/
 
     this.initializeHUD();
   },
 
   // ==========================
-  // HUD INIT
+  // 3️⃣ HUD INIT (solo portales con materiales reales)
   // ==========================
   initializeHUD: function () {
-    if (!this.hudWings || !this.hudText) return;
-    this.updateHUD("OFF");
+  // Wings
+  this.hudWings = document.querySelector("#hud-wings");
+  this.hudText = document.querySelector("#hud-wings-text");
+  this.wingsMaterial = this.getMaterialByName("Alabastro blanco");
+
+  if (this.hudWings && this.hudText) {
+    this.updateHUD(this.hudWings, this.hudText, "OFF", this.wingsMaterial);
+  }
+
+  // Cube
+  this.hudCube = document.querySelector("#hud-cube");
+  this.hudCubeText = document.querySelector("#hud-cube-text");
+  this.cubeMaterial = this.getMaterialByName("Alabastro rosa");
+
+  if (this.hudCube && this.hudCubeText) {
+    this.updateHUD(this.hudCube, this.hudCubeText, "OFF", this.cubeMaterial);
+  }
+
+  // Stars (dejamos comentado por ahora)
+  /*
+  this.hudStars = document.querySelector("#hud-stars");
+  this.hudStarsText = document.querySelector("#hud-stars-text");
+  this.starsMaterial = this.getMaterialByName("Cristal dorado");
+  if (this.hudStars && this.hudStarsText) {
+      this.updateHUD(this.hudStars, this.hudStarsText, "OFF", this.starsMaterial);
+  }
+  */
   },
 
-  updateHUD: function (state) {
-    if (!this.hudWings || !this.hudText) return;
-
-    this.hudWings.object3D.traverse((obj) => {
+  // ==========================
+  // Función para buscar material por nombre
+  // ==========================
+  getMaterialByName: function (materialName) {
+    let foundMat = null;
+    this.el.sceneEl.object3D.traverse((obj) => {
       if (obj.isMesh) {
-        obj.material =
-          state === "ON"
-            ? new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 1,
-                emissive: 0xffffff,
-                emissiveIntensity: 1,
-                side: THREE.DoubleSide,
-              })
-            : new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.5,
-                side: THREE.DoubleSide,
-              });
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((mat) => {
+          if (mat.name === materialName) foundMat = mat;
+        });
+      }
+    });
+    return foundMat;
+  },
 
+  // ==========================
+  // Actualizar HUD con material
+  // ==========================
+  updateHUD: function (hud, text, state, material) {
+    if (!hud || !text || !material) return;
+
+    hud.object3D.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.material = material.clone(); // clonamos para no tocar el original
+        obj.material.opacity = state === "ON" ? 1 : 0.5;
         obj.material.needsUpdate = true;
       }
     });
 
-    this.hudText.setAttribute("text-geometry", "value", state);
+    text.setAttribute("text-geometry", "value", state);
   },
 
   // ==========================
@@ -217,11 +240,31 @@ AFRAME.registerComponent("check-door", {
           collider.triggered = !collider.triggered;
 
           if (collider.name === "Portal_blanco_collider") {
-            this.updateHUD(collider.triggered ? "ON" : "OFF");
-
+            this.updateHUD(
+              this.hudWings,
+              this.hudText,
+              collider.triggered ? "ON" : "OFF",
+              this.wingsMaterial,
+            );
             const flyComp = this.el.sceneEl.components["fly-mode"];
             if (flyComp) flyComp.toggleFlyMode();
           }
+
+          if (collider.name === "Portal_alabastro_collider") {
+            this.updateHUD(
+              this.hudCube,
+              this.hudCubeText,
+              collider.triggered ? "ON" : "OFF",
+              this.cubeMaterial,
+            );
+            const arComp = this.el.sceneEl.components["activate-ar"];
+            if (arComp) arComp.toggleAR();
+          }
+
+          // Para Stars (de momento comentado)
+          // if (collider.name === "Portal_dorado_collider") {
+          //   this.updateHUD(this.hudStars, this.hudStarsText, collider.triggered ? "ON" : "OFF", this.starsMaterial);
+          // }
         }
       }
 

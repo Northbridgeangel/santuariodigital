@@ -26,6 +26,7 @@
     <script src="./js/controls/mobileControl.js"></script>
     <script src="./js/controls/vr-controls.js"></script>
     <script src="./js/controls/fly-mode.js"></script>
+    <script src="./js/components/activate-ar.js"></script>
     <script src="./js/components/changenote.js"></script>
     <script src="./js/components/uploadimg.js"></script>
     <script src="./js/components/check-player.js"></script>
@@ -124,9 +125,9 @@
     <!--  EL PROYECTO  -->
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
-        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser upload-wall-texture fly-mode vr-controls>
+        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser upload-wall-texture fly-mode activate-ar="sky: #Main-sky; videoEl: #ar-video" vr-controls>
         <!-- Fondo -->
-        <a-sky src="./assets/environment.png" rotation="0 145 0"></a-sky>
+        <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 145 0"></a-sky>
 
         <!-- Luz principal -->
         <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
@@ -165,7 +166,8 @@
 
         <!-- GLB cargado como escenario estático -->
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
-            click-hover-detector="maxDistance: 5" check-door></a-entity>
+            click-hover-detector="maxDistance: 5" check-door>
+        </a-entity>
 
         <a-entity color-picker>
             <a-circle color-wheel radius="0.1" position="-0.0075 0.25 0" rotation="0 90 0"></a-circle>
@@ -181,7 +183,7 @@
             </a-entity>
         </a-entity>
 
-        <!-- Indicador moviendo: Checkdoor-FlightMode / Stars -->
+        <!-- Indicador moviendo: Checkdoor / Stars -->
         <a-entity id="hud-stars" position="1.315 0.98 1.912">
             <a-entity id="hud-stars-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
@@ -191,7 +193,7 @@
             </a-entity>
         </a-entity>
 
-        <!-- Indicador moviendo: Checkdoor-FlightMode / Cube -->
+        <!-- Indicador moviendo: Checkdoor-ActivateAR / Cube -->
         <a-entity id="hud-cube" position="-0.55 0.98 2.1">
             <a-entity id="hud-cube-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
