@@ -15,6 +15,56 @@ AFRAME.registerSystem("InteractionSystem", {
     const interactiveMeshes = [];
     let modelLoaded = false;
 
+    // ----------------------------
+    // Registrar entidades A-Frame con clase clickable
+    // ----------------------------
+    const registerClickableEntities = () => {
+      const clickableEls = document.querySelectorAll(".clickable");
+
+      clickableEls.forEach(el => {
+
+        const registerMesh = () => {
+          const obj = el.getObject3D("mesh");
+          if (!obj) return;
+
+          obj.traverse(child => {
+            if (!child.isMesh || child.userData.interactable) return;
+
+            // 🔹 Hacer interactable y hoverable
+            child.userData.interactable = true;   
+            child.userData.hoverable = true;      
+
+            // 🔹 Guardar material original para reset
+            child.originalMaterial = child.material.clone();
+
+            // 🔹 Añadir a arrays de interacción
+            interactiveMeshes.push(child);
+            globalMeshes.push(child);
+
+            console.log("✨ Clickable registrado:", el.id || child.name);
+          });
+        };
+
+        if (el.getObject3D("mesh")) {
+          registerMesh();
+        } else {
+          const handler = (e) => {
+            if (e.detail.type === "mesh") {
+              registerMesh();
+              el.removeEventListener("object3dset", handler);
+            }
+          };
+          el.addEventListener("object3dset", handler);
+        }
+
+      });
+    };
+
+    // Ejecutar al cargar la escena
+    sceneEl.addEventListener("loaded", () => {
+      registerClickableEntities();
+    });
+
     // ✅ HELPER VR — obtenemos el mesh interactivo más cercano al raycast (para VR)
     const getInteractableRoot = (mesh) => {
       while (mesh) {
@@ -127,8 +177,14 @@ AFRAME.registerSystem("InteractionSystem", {
 
       handleClick(mesh);
       sceneEl.emit("mesh-clicked", { mesh });
-      console.log(`🔴 CLICK REAL: ${mesh.name}`);
-    };
+      mesh.el?.emit("click", { mesh }); // Reenviar click a A-Frame para click en entities (si tiene)
+
+      //-----------------------------------------
+      // 🔹 Mostrar ID confiable para GLB o clickable externo
+      //-----------------------------------------
+      const meshId = mesh.name || mesh.el?.id || "unknown";
+      console.log(`🔴 CLICK REAL: ${meshId}`);
+    };;
 
     const attachPointerEvents = () => {
       const attach = () => {
@@ -156,6 +212,7 @@ AFRAME.registerSystem("InteractionSystem", {
           handleClick(mesh);
           sceneEl.emit("mesh-clicked", { mesh });
           //console.log(`🎮 VR CLICK (botón 4): ${mesh.name}`);
+          mesh.el?.emit("click", { mesh }); // Reenviar click a A-Frame para click en entities (si tiene)
         });
       });
     });

@@ -2,13 +2,20 @@
 let selectedMesh = null; // mesh actualmente activo
 let hoveredMesh = null; // mesh actualmente hovered
 
+//-----------------------------------------
+// 🔹 Helper para obtener un ID legible de cualquier mesh
+//-----------------------------------------
+function getMeshId(mesh) {
+  return mesh.name || mesh.el?.id || "unknown";
+}
+
 function handleClick(mesh) {
   //-----------------------------------------
   // 🔹 Excepciones para Creator Menu y Iconos (Modo especial)
   //-----------------------------------------
   if (
-    mesh.name.startsWith("Btn-creator-menú") ||
-    mesh.name.startsWith("Icon")
+    mesh.name?.startsWith("Btn-creator-menú") ||
+    mesh.name?.startsWith("Icon")
   ) {
     // NO resetear aquí, el sistema creator-mode controla el estado
     return; // 🚫 salir, solo la lógica de resaltar se hará desde creator-mode
@@ -20,7 +27,9 @@ function handleClick(mesh) {
   // 🔹 Si ya había un mesh seleccionado distinto, lo reseteamos
   if (selectedMesh && selectedMesh !== mesh) {
     resetMesh(selectedMesh);
-    console.log(`Mesh ${selectedMesh.name} deseleccionado automáticamente`);
+    console.log(
+      `Mesh ${getMeshId(selectedMesh)} deseleccionado automáticamente`,
+    );
     selectedMesh = null;
   }
 
@@ -28,14 +37,14 @@ function handleClick(mesh) {
   if (selectedMesh === mesh) {
     resetMesh(mesh);
     selectedMesh = null;
-    console.log(`Mesh ${mesh.name} deseleccionado`);
+    console.log(`Mesh ${getMeshId(mesh)} deseleccionado`);
     return;
   }
 
   // 🔹 Seleccionamos el mesh clicado
   selectedMesh = mesh;
   resaltarMesh(mesh, "click"); // aplicamos resalte click (rojo)
-  console.log(`Mesh ${mesh.name} seleccionado`);
+  console.log(`Mesh ${getMeshId(mesh)} seleccionado`);
 }
 
 function handleHover(mesh) {
@@ -51,8 +60,15 @@ function handleHover(mesh) {
     hoveredMesh = null;
   }
 
-  // 🔹 Solo hover para meshes que empiecen por "Btn"
-  if (!mesh.name.startsWith("Btn")) {
+  //-----------------------------------------
+  // 🔹 Solo hover para meshes que son hoverables
+  //   → meshes del GLB que empiecen por "Btn" o cualquier .clickable externo
+  //-----------------------------------------
+  const isHoverableMesh =
+    mesh.userData?.hoverable || mesh.name?.startsWith("Btn");
+
+  if (!isHoverableMesh) {
+    // 🔹 Si el mesh no es hoverable, aseguramos limpiar hover anterior
     if (hoveredMesh) resetMesh(hoveredMesh);
     hoveredMesh = null;
     return;
@@ -62,7 +78,7 @@ function handleHover(mesh) {
   if (hoveredMesh !== mesh) {
     resaltarMesh(mesh, "hover");
     hoveredMesh = mesh;
-    //console.log(`🟢 HOVER: ${mesh.name}`);
+    console.log(`🟢 HOVER: ${getMeshId(mesh)}`);
   }
 }
 
@@ -74,7 +90,7 @@ function handleHoverExit() {
   if (hoveredMesh.userData?.active) {
     console.log(
       "HoverExit sobre:",
-      hoveredMesh?.name,
+      getMeshId(hoveredMesh),
       "active:",
       hoveredMesh?.userData?.active,
     );
