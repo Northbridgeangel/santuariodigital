@@ -14,6 +14,74 @@ AFRAME.registerComponent("revelation-mode", {
     this.originalSnapshot = new Map();
     this.originalSkySnapshot = new Map();
 
+    const scene = this.el.sceneEl;
+
+    // 🔹  Función para mostrar/ocultar HUD y modos
+    this.setHUD = (hudVisible) => {
+      [this.hudWings, this.hudCube].forEach((hud) => {
+        if (!hud) return;
+
+        // Restaurar posición y rotación desde snapshot
+        if (!this.hudSnapshot) this.hudSnapshot = new Map();
+
+        if (!this.hudSnapshot.has(hud.id)) {
+          // Guardar snapshot inicial del padre + hijos
+          const children = Array.from(hud.children);
+          this.hudSnapshot.set(hud.id, {
+            parent: {
+              position: hud.getAttribute("position"),
+              rotation: hud.getAttribute("rotation"),
+              visible: hud.object3D.visible,
+            },
+            children: children.map((c) => ({
+              el: c,
+              position: c.getAttribute("position"),
+              rotation: c.getAttribute("rotation"),
+              visible: c.object3D.visible,
+            })),
+          });
+        }
+
+        // Mostrar u ocultar padre
+        hud.object3D.visible = hudVisible;
+
+        // Restaurar posición y rotación del padre si se muestra
+        if (hudVisible) {
+          const snap = this.hudSnapshot.get(hud.id);
+          hud.setAttribute("position", snap.parent.position);
+          hud.setAttribute("rotation", snap.parent.rotation);
+
+          // Restaurar hijos
+          snap.children.forEach((childSnap) => {
+            const c = childSnap.el;
+            c.setAttribute("position", childSnap.position);
+            c.setAttribute("rotation", childSnap.rotation);
+            c.object3D.visible = true;
+
+            // Reiniciar animación si tiene <a-animation> o animation
+            const anim =
+              c.querySelector("a-animation") || c.getAttribute("animation");
+            if (anim) {
+              c.removeAttribute("animation");
+              void c.offsetWidth; // forzar reflow para reiniciar
+              c.setAttribute("animation", anim);
+            }
+          });
+        }
+      });
+
+      // 🔹 Activar o desactivar componentes de escena
+      ["fly-mode", "activate-ar"].forEach((comp) => {
+        // Eliminamos cualquier estado previo
+        scene.removeAttribute(comp);
+
+        // Solo activamos si HUD visible o estamos en default
+        if (hudVisible) {
+          scene.setAttribute(comp, {}); // {}: usa la configuración por defecto
+        }
+      });
+    };
+
     // Guardar snapshot del GLB
     if (this.glb) {
       this.glb.addEventListener("model-loaded", () => {
@@ -55,34 +123,6 @@ AFRAME.registerComponent("revelation-mode", {
       console.log("✔ Snapshot del Sky guardado");
     }
 
-    // 🔹 Función auxiliar: desactiva HUD y Fly/AR
-    this.disableHUDandModes = () => {
-      if (this.hudWings) {
-        this.hudWings.object3D.visible = false;
-        if (this.hudWings.components) {
-          Object.keys(this.hudWings.components).forEach((c) =>
-            this.hudWings.removeAttribute(c),
-          );
-        }
-      }
-      if (this.hudCube) {
-        this.hudCube.object3D.visible = false;
-        if (this.hudCube.components) {
-          Object.keys(this.hudCube.components).forEach((c) =>
-            this.hudCube.removeAttribute(c),
-          );
-        }
-      }
-
-      const scene = this.el.sceneEl;
-      ["fly-mode", "activate-ar"].forEach((comp) => {
-        if (scene.components[comp]) {
-          this[`_${comp}Comp`] = scene.components[comp];
-          scene.removeAttribute(comp);
-        }
-      });
-    };
-
     // Click en orb → avanzar estado
     if (this.orb) {
       this.orb.addEventListener("click", () => {
@@ -120,29 +160,28 @@ AFRAME.registerComponent("revelation-mode", {
               m.material.needsUpdate = true;
             });
             if (this.particles)
-              this.particles.setAttribute("visible", this.active); // solo si active
-            if (this.hudWings) this.hudWings.object3D.visible = this.active;
-            if (this.hudCube) this.hudCube.object3D.visible = this.active;
+              this.particles.setAttribute("visible", this.active);
+
+            this.setHUD(true); // HUDs visibles, modes enabled
             this.el.sceneEl.setAttribute("background", "color: #000000");
             break;
 
           case "lightcontrol":
             this.originalSnapshot.forEach((snap) => {
               const child = snap.mesh;
-              if (snap.visible) {
-                child.visible = true;
-                if (child.material) {
-                  child.material.opacity = 0.5;
-                  child.material.transparent = true;
-                  child.material.needsUpdate = true;
-                }
-              } else child.visible = false;
+              child.visible = snap.visible;
+              if (child.material) {
+                child.material.opacity = 0.5;
+                child.material.transparent = true;
+                child.material.needsUpdate = true;
+              }
             });
             if (this.sky) this.sky.setAttribute("visible", true);
             if (this.particles)
               this.particles.setAttribute("visible", this.active);
+
+            this.setHUD(false); // HUDs ocultos, modes disabled
             this.el.sceneEl.setAttribute("background", "color: #000000");
-            this.disableHUDandModes();
             break;
 
           case "superlight":
@@ -161,8 +200,9 @@ AFRAME.registerComponent("revelation-mode", {
             }
             if (this.particles)
               this.particles.setAttribute("visible", this.active);
+
+            this.setHUD(false); // HUDs ocultos, modes disabled
             this.el.sceneEl.setAttribute("background", "color: #000000");
-            this.disableHUDandModes();
             break;
 
           case "relaxing":
@@ -175,8 +215,9 @@ AFRAME.registerComponent("revelation-mode", {
               });
             }
             if (this.particles) this.particles.setAttribute("visible", false);
+
+            this.setHUD(false); // HUDs ocultos, modes disabled
             this.el.sceneEl.setAttribute("background", "color: #000000");
-            this.disableHUDandModes();
             break;
         }
 
