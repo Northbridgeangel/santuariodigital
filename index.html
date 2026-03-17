@@ -12,8 +12,8 @@
     <!-- Asegúrate de incluir este script ANTES de usar <a-entity spe-particles> -->
     <script
         src="https://cdn.jsdelivr.net/gh/c-frame/aframe-particle-system-component@1.1.4/dist/aframe-particle-system-component.min.js"></script>
-<script
-    src="https://unpkg.com/aframe-sprite-particles-component@0.5.4/dist/aframe-sprite-particles-component.js"></script>
+    <script
+        src="https://unpkg.com/aframe-sprite-particles-component@0.5.4/dist/aframe-sprite-particles-component.js"></script>
 
     <!-- Componente para texto 3D con volumen -->
     <script
@@ -21,6 +21,10 @@
 
     <!-- Troika Text para A-Frame -->
     <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
+
+    <!-- THREE.js y postprocesado para efectos visuales -->
+    <script src="https://cdn.jsdelivr.net/gh/akbartus/A-Frame-Component-Postprocessing/dist/post-processing.js"></script>
+
 
     <!-- Componentes custom -->
     <script type="module" src="./js/Main.js"></script>
@@ -131,17 +135,18 @@
     <!--  EL PROYECTO  -->
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
-        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls>
+        cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser
+        upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls>
         <!-- Fondo -->
-        <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 145 0"></a-sky>
+        <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 -125 0"></a-sky>
 
         <!-- Luz principal -->
         <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
         <a-entity light="type: ambient; intensity: 0.3"></a-entity>
-       
+
         <!-- RIG que agrupa movimiento + cámara -->
-        <a-entity id="rig" vr-scale-rig position="0 0 0" check-player touch-hold
-            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10">
+        <a-entity id="rig" vr-scale-rig position="0 0 2" check-player touch-hold
+            scroll-fly-smooth="speed:0.02; step:0.25; minY:-10; maxY:10" rotation="0 0 0">
 
             <!-- Cámara con todos tus controles -->
             <a-entity id="camera" camera look-controls arrow-fly-smooth="step:0.005; speed:0.15" swipe-up-down
@@ -169,48 +174,48 @@
 
         </a-entity>
 
-
         <!-- GLB cargado como escenario estático -->
         <a-entity id="escenario" gltf-model="./assets/escenario.glb" mirror-material="target: #escenario"
             click-hover-detector="maxDistance: 5" check-door>
         </a-entity>
 
         <a-entity color-picker>
-            <a-circle color-wheel radius="0.1" position="-0.0075 0.25 0" rotation="0 90 0"></a-circle>
+            <a-circle color-wheel radius="0.1" position="-0.0075 0.25 0" rotation="0 0 0"></a-circle>
         </a-entity>
 
         <!-- Indicador moviendo: Checkdoor-FlightMode / Wings -->
-        <a-entity id="hud-wings" position="0.44 0.98 3.015">
+        <a-entity id="hud-wings" position="3.015 0.98 -0.44">
             <a-entity id="hud-wings-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
-                material="color: white; side: double; transparent: true; opacity: 0.5" rotation="0 180 0"
+                material="color: white; side: double; transparent: true; opacity: 0.5" rotation="0 -90 0"
                 position="0 0 0.01"
                 animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
             </a-entity>
         </a-entity>
 
         <!-- Indicador moviendo: Checkdoor / Stars -->
-        <a-entity id="hud-stars" position="1.315 0.98 1.912">
+        <a-entity id="hud-stars" position="1.912 0.98 -1.315">
             <a-entity id="hud-stars-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
-                material="color: yellow; side: double; transparent: true; opacity: 0.5" rotation="0 270 0"
+                material="color: yellow; side: double; transparent: true; opacity: 0.5" rotation="0 0 0"
                 position="0 0 0.01"
                 animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
             </a-entity>
         </a-entity>
 
         <!-- Indicador moviendo: Checkdoor-ActivateAR / Cube -->
-        <a-entity id="hud-cube" position="-0.55 0.98 2.1">
+        <a-entity id="hud-cube" position="2.1 0.98 0.55">
             <a-entity id="hud-cube-text"
                 text-geometry="value: OFF; font: url(./assets/fonts/Roboto_Regular.json); size: 0.088; height: 0.03; curveSegments: 12"
-                material="color: pink; side: double; transparent: true; opacity: 0.5" rotation="0 90 0" position="0 0 0.01"
+                material="color: pink; side: double; transparent: true; opacity: 0.5" rotation="0 180 0"
+                position="0 0 0.01"
                 animation="property: position; to: 0 0.02 0.01; dur: 1500; dir: alternate; loop: true; easing: easeInOutSine">
             </a-entity>
         </a-entity>
 
 
         <!-- HUD o UI principal, pegada al visor -->
-        <a-entity id="hud" hud-overlay="camera: #camera" scale="1 1 1">
+        <a-entity id="hud" hud-overlay="camera: #camera" scale="1 1 1" visible="false">
             <!-- Plano de depuración para ver el HUD padre -->
             <a-plane hud-autoscale width="0.15" height="0.1" color="transparent" opacity="0.2" position="0 0 0"
                 material="shader: flat; side: double; fog: false; depthTest: false; toneMapped: false;">
@@ -234,9 +239,17 @@
         </a-entity>
 
         <a-entity id="scene-orb" visible="false" geometry="primitive:sphere; radius:0.09"
-            material="color:#ffffff; emissive:#88ccff; emissiveIntensity:0.8" position="-1.4 -0.1 -1.95" class="clickable">
+            material="color:#ffffff; emissive:#88ccff; emissiveIntensity:0.8" position="-1.95 -0.1 1.4"
+            class="clickable">
         </a-entity>
-        
+
+        <a-entity position="0 2 0" visible="false">
+            <a-sphere radius="0.3"
+                material="color: #ffdd00; emissive: #ffdd00; emissiveIntensity: 2; metalness: 0; roughness: 0.1">
+            </a-sphere>
+            <a-light type="point" intensity="1" distance="5" color="#ffdd00"></a-light>
+        </a-entity>
+
     </a-scene>
 </body>
 
