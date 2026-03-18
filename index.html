@@ -23,7 +23,8 @@
     <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
 
     <!-- THREE.js y postprocesado para efectos visuales -->
-    <script src="https://cdn.jsdelivr.net/gh/akbartus/A-Frame-Component-Postprocessing/dist/post-processing.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/gh/akbartus/A-Frame-Component-Postprocessing/dist/post-processing.js"></script>
 
 
     <!-- Componentes custom -->
@@ -136,7 +137,7 @@
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
         cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser
-        upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls>
+        upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls> <!-- stats -->
         <!-- Fondo -->
         <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 -125 0"></a-sky>
 
@@ -239,7 +240,7 @@
         </a-entity>
 
         <a-entity id="scene-orb" visible="false" geometry="primitive:sphere; radius:0.09"
-            material="color:#ffffff; emissive:#88ccff; emissiveIntensity:0.8" position="-1.95 -0.1 1.4"
+            material="color:#ffffff; emissive:#88ccff; emissiveIntensity:0.8" position="1.10 -0.1 -1.5"
             class="clickable">
         </a-entity>
 
