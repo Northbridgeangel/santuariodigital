@@ -744,7 +744,6 @@ AFRAME.registerComponent("line-selector", {
 /* ==========================
 LINE GIZMO COMPONENT
 Gizmo flotante para líneas seleccionadas
-
 ========================== */
 
 AFRAME.registerComponent("line-gizmo", {
@@ -764,6 +763,10 @@ AFRAME.registerComponent("line-gizmo", {
 
     this.GizmoOption = "Circle";
     this.visualSelected = false;
+
+    // 🔥 MOVE STATE
+    this.isMoving = false;
+    this.moveOffset = new THREE.Vector3();
 
     this.materialNormalMesh = new THREE.MeshBasicMaterial({
       color: this.data.materialNormal,
@@ -802,7 +805,6 @@ AFRAME.registerComponent("line-gizmo", {
       );
 
       circle.classList.add("clickable");
-
       return circle;
     };
 
@@ -843,6 +845,45 @@ AFRAME.registerComponent("line-gizmo", {
       }
 
       this.selectedLine = line;
+
+      // 🔥 FIX IMPORTANTE
+      line.frustumCulled = false;
+    };
+
+    const updateLinePosition = (line, newCenter) => {
+      const geometry = line.geometry;
+      const pos = geometry.attributes.position.array;
+
+      let cx = 0,
+        cy = 0,
+        cz = 0;
+      const count = pos.length / 3;
+
+      for (let i = 0; i < pos.length; i += 3) {
+        cx += pos[i];
+        cy += pos[i + 1];
+        cz += pos[i + 2];
+      }
+
+      cx /= count;
+      cy /= count;
+      cz /= count;
+
+      const dx = newCenter.x - cx;
+      const dy = newCenter.y - cy;
+      const dz = newCenter.z - cz;
+
+      for (let i = 0; i < pos.length; i += 3) {
+        pos[i] += dx;
+        pos[i + 1] += dy;
+        pos[i + 2] += dz;
+      }
+
+      geometry.attributes.position.needsUpdate = true;
+
+      // 🔥 CLAVE: evitar desaparición
+      geometry.computeBoundingSphere();
+      geometry.computeBoundingBox();
     };
 
     const createGizmo = (x, y, z) => {
@@ -860,7 +901,6 @@ AFRAME.registerComponent("line-gizmo", {
       gizmo.object3D.position.set(x, y, z);
 
       this.el.appendChild(gizmo);
-
       this.gizmo = gizmo;
 
       const clickHandler = () => {
@@ -873,7 +913,6 @@ AFRAME.registerComponent("line-gizmo", {
           moveVisual.object3D.visible = true;
 
           this.visualSelected = false;
-
           applyMaterialToVisual(moveVisual, false);
         } else {
           if (!this.visualSelected) {
@@ -892,6 +931,34 @@ AFRAME.registerComponent("line-gizmo", {
 
       circleVisual.addEventListener("click", clickHandler);
       moveVisual.addEventListener("click", clickHandler);
+
+      /* -------------------------
+      DRAG MOVE
+      ------------------------- */
+
+      moveVisual.addEventListener("mousedown", () => {
+        if (this.GizmoOption !== "Move") return;
+
+        this.isMoving = true;
+
+        const gizmoPos = new THREE.Vector3();
+        const camPos = new THREE.Vector3();
+
+        this.gizmo.object3D.getWorldPosition(gizmoPos);
+        this.cameraObj.getWorldPosition(camPos);
+
+        this.moveOffset.copy(gizmoPos).sub(camPos);
+      });
+
+      window.addEventListener("mouseup", () => {
+        if (!this.isMoving) return;
+
+        this.isMoving = false;
+
+        if (this.selectedLine) {
+          updateLinePosition(this.selectedLine, this.gizmo.object3D.position);
+        }
+      });
     };
 
     /* -------------------------
@@ -900,11 +967,9 @@ AFRAME.registerComponent("line-gizmo", {
 
     sceneEl.addEventListener("lines-selected", (evt) => {
       const lines = evt.detail.lines;
-
       if (!lines || !lines.length) return;
 
-      const line = lines[lines.length - 1]; // última seleccionada
-
+      const line = lines[lines.length - 1];
       moveGizmoToLine(line);
     });
 
@@ -925,9 +990,7 @@ AFRAME.registerComponent("line-gizmo", {
         return;
       }
 
-      const line = lines[lines.length - 1];
-
-      moveGizmoToLine(line);
+      moveGizmoToLine(lines[lines.length - 1]);
     });
 
     /* -------------------------
@@ -951,7 +1014,7 @@ AFRAME.registerComponent("line-gizmo", {
     });
 
     /* -------------------------
-    MIRAR A CÁMARA
+    TICK
     ------------------------- */
 
     this.tick = () => {
@@ -960,7 +1023,15 @@ AFRAME.registerComponent("line-gizmo", {
       const camPos = new THREE.Vector3();
       this.cameraObj.getWorldPosition(camPos);
 
+      // mirar a cámara
       this.gizmo.object3D.lookAt(camPos);
+
+      // mover con cámara
+      if (this.isMoving && this.GizmoOption === "Move") {
+        const newPos = new THREE.Vector3().copy(camPos).add(this.moveOffset);
+
+        this.gizmo.object3D.position.copy(newPos);
+      }
     };
   },
 });
@@ -1136,7 +1207,6 @@ AFRAME.registerComponent("pointer-eraser", {
     });
   },
 });
-
 
 /* ========================== 
 COLOR PICKER COMPONENT
