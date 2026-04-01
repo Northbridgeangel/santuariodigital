@@ -941,6 +941,9 @@ AFRAME.registerComponent("line-gizmo", {
 
         this.isMoving = true;
 
+        // 🔵 ACTIVAR COLOR AZUL (grabbing)
+        applyMaterialToVisual(moveVisual, true);
+
         const gizmoPos = new THREE.Vector3();
         const camPos = new THREE.Vector3();
 
@@ -954,6 +957,9 @@ AFRAME.registerComponent("line-gizmo", {
         if (!this.isMoving) return;
 
         this.isMoving = false;
+
+        // 🔴 VOLVER A ROJO (idle)
+        applyMaterialToVisual(moveVisual, false);
 
         if (this.selectedLine) {
           updateLinePosition(this.selectedLine, this.gizmo.object3D.position);
