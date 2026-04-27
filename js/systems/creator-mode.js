@@ -322,115 +322,170 @@ AFRAME.registerComponent("pointer-draw", {
     const sceneEl = this.el.sceneEl;
     const escenario = window.OpenCentralGlobals.core.escenario;
 
+    // -------------------------
+    // STATE DRAWING
+    // -------------------------
     this.isPointerDown = false;
     this.currentPoints = null;
     this.currentLine = null;
-    this.currentMesh = null; // mesh actual donde se dibuja
+    this.currentEntity = null;
+    this.currentMesh = null;
+
+    // 🔥 AÑADIDO: smooth system
+    this.lastPoint = null;
+    this.minDistance = 0.012;
+    this.smoothFactor = 0.35;
+
     this.drawGroup = new THREE.Group();
     this.drawGroup.name = "DrawGroup";
+
     this.handTriggerDown = { right: false, left: false };
-    this.currentColor = 0xff0000; // 🔹 Color inicial rojo
+    this.currentColor = 0xff0000;
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
     // -------------------------
-    // Añadir DrawGroup al modelo
+    // ADD DRAW GROUP
     // -------------------------
     const addDrawGroup = () => {
       const modelRoot = escenario.getObject3D("mesh");
       if (!modelRoot) return;
       modelRoot.add(this.drawGroup);
     };
+
     if (escenario.getObject3D("mesh")) addDrawGroup();
     escenario.addEventListener("model-loaded", addDrawGroup);
 
     // -------------------------
-    // Activación desde Creator Mode
+    // ACTIVATE / DEACTIVATE
     // -------------------------
     sceneEl.addEventListener("IconDraw-clicked", (evt) => {
       this.data.enabled = evt.detail.active;
-      this.isPointerDown = false;
-      this.currentPoints = null;
-      this.currentLine = null;
-      this.currentMesh = null;
+      this.resetStroke();
     });
 
     // -------------------------
-    // Cambiar color dinámicamente
+    // COLOR CHANGE
     // -------------------------
     this.setDrawColor = (colorHex) => {
-      // 🔹 Si hay línea en curso, la finalizamos
-      if (this.currentLine) {
-        this.currentPoints = null;
-        this.currentLine = null;
-        this.currentMesh = null;
-      }
+      this.resetStroke();
       this.currentColor = colorHex;
     };
 
     // -------------------------
-    // Añadir punto al dibujo
+    // RESET (IMPORTANTE)
+    // -------------------------
+    this.resetStroke = () => {
+      this.currentPoints = null;
+      this.currentLine = null;
+      this.currentEntity = null;
+      this.currentMesh = null;
+      this.lastPoint = null; // 🔥 CRÍTICO
+    };
+
+    // -------------------------
+    // ADD POINT (CORE)
     // -------------------------
     this.addDrawPoint = (point, mesh) => {
       if (!point || !mesh) {
-        this.currentPoints = null;
-        this.currentLine = null;
-        this.currentMesh = null;
+        this.resetStroke();
         return;
       }
 
+      // cambio de mesh = nuevo stroke
       if (this.currentMesh && mesh !== this.currentMesh) {
-        this.currentPoints = [];
-        this.currentLine = null;
+        this.resetStroke();
       }
 
       this.currentMesh = mesh;
 
       if (!this.currentPoints) {
         this.currentPoints = [];
-        this.currentLine = null;
       }
 
-      this.currentPoints.push(point.clone());
+      // -------------------------
+      // DISTANCE FILTER
+      // -------------------------
+      if (this.lastPoint) {
+        const dist = this.lastPoint.distanceTo(point);
+        if (dist < this.minDistance) return;
+      }
+
+      // -------------------------
+      // FIRST POINT
+      // -------------------------
+      if (!this.lastPoint) {
+        this.lastPoint = point.clone();
+        this.currentPoints.push(point.clone());
+        return;
+      }
+
+      // -------------------------
+      // SMOOTHING
+      // -------------------------
+      const smoothed = this.lastPoint.clone().lerp(point, this.smoothFactor);
+
+      this.lastPoint = smoothed.clone();
+      this.currentPoints.push(smoothed);
 
       if (this.currentPoints.length < 2) return;
 
-      if (this.currentLine) this.drawGroup.remove(this.currentLine);
+      // -------------------------
+      // GEOMETRY UPDATE
+      // -------------------------
+      if (this.currentLine && this.currentEntity) {
+        this.currentEntity.remove(this.currentLine);
+      }
 
       const geometry = new THREE.BufferGeometry().setFromPoints(
         this.currentPoints,
       );
 
       const material = new THREE.LineBasicMaterial({
-        color: this.currentColor, // 🔹 ahora dinámico
+        color: this.currentColor,
       });
 
       this.currentLine = new THREE.Line(geometry, material);
 
-      // 🔹 Metadata para edición, selección o exportación
-      this.currentLine.userData = {
-        type: "draw-line",
-        points: this.currentPoints.slice(),
-        createdAt: Date.now(),
-        color: this.currentColor,
-      };
+      // -------------------------
+      // ENTITY CREATE
+      // -------------------------
+      if (!this.currentEntity) {
+        this.currentEntity = new THREE.Object3D();
 
-      this.drawGroup.add(this.currentLine);
+        this.currentEntity.userData = {
+          id: crypto.randomUUID(),
+          type: "draw-line",
+          points: [],
+          createdAt: Date.now(),
+          color: this.currentColor,
+          mode: window.DrawingMode.type,
+          mesh: mesh,
+        };
+
+        this.drawGroup.add(this.currentEntity);
+      }
+
+      // -------------------------
+      // ENTITY UPDATE
+      // -------------------------
+      this.currentEntity.add(this.currentLine);
+
+      this.currentEntity.userData.points = this.currentPoints.slice();
+      this.currentEntity.userData.color = this.currentColor;
     };
 
     // -------------------------
-    // Limpiar dibujo
+    // CLEAR DRAWING
     // -------------------------
     window.clearDrawing = () => {
       this.drawGroup.clear();
-      this.currentPoints = null;
-      this.currentLine = null;
-      this.currentMesh = null;
+      this.resetStroke();
     };
 
     // -------------------------
-    // Obtener posición según modo y mesh intersectado
+    // POSITION SYSTEM (TU CÓDIGO INTACTO)
     // -------------------------
     this.getDrawPosition = (ctrlOrPointer) => {
       const type = window.DrawingMode.type;
@@ -440,17 +495,19 @@ AFRAME.registerComponent("pointer-draw", {
       /* ---------- GROUND ---------- */
       if (type === "ground") {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
           raycaster.ray.intersectPlane(plane, pos);
         } else {
           ctrlOrPointer.object3D.getWorldPosition(pos);
         }
+
         intersectedMesh = escenario.getObject3D("mesh");
         return { point: pos, mesh: intersectedMesh };
       }
 
-      /* ---------- WALL / OBJETO ---------- */
+      /* ---------- WALL ---------- */
       if (type === "wall") {
         const modelRoot = escenario.getObject3D("mesh");
         if (!modelRoot) return { point: null, mesh: null };
@@ -459,14 +516,25 @@ AFRAME.registerComponent("pointer-draw", {
           this._wallMeshes = [];
           modelRoot.traverse((child) => {
             if (!child.isMesh || !child.name) return;
+
             const name = child.name.toLowerCase();
+
             if (
               name.startsWith("walls") ||
               name === "selfnotemesh" ||
               name === "objetoañadido" ||
-              name === "mybackground"
-            )
+              name === "mybackground" ||
+              // 🔥 nuevos muros permitidos
+              name === "muro_hab_entrada" ||
+              name.startsWith("myentrance") ||
+              name.startsWith("muro_entrada") ||
+              name === "muro_gal_salida" ||
+              name === "murolienzo001" ||
+              name === "murolienzo002" ||
+              name === "muro_hab_salida"
+            ) {
               this._wallMeshes.push(child);
+            }
           });
         }
 
@@ -477,12 +545,15 @@ AFRAME.registerComponent("pointer-draw", {
         } else {
           const origin = new THREE.Vector3();
           const direction = new THREE.Vector3();
+
           ctrlOrPointer.object3D.getWorldPosition(origin);
           ctrlOrPointer.object3D.getWorldDirection(direction);
+
           raycaster.set(origin, direction);
         }
 
         const intersects = raycaster.intersectObjects(this._wallMeshes, true);
+
         if (intersects.length > 0) {
           intersectedMesh = intersects[0].object;
           pos.copy(intersects[0].point);
@@ -492,10 +563,11 @@ AFRAME.registerComponent("pointer-draw", {
         return { point: null, mesh: null };
       }
 
-      /* ---------- 3D LIBRE ---------- */
+      /* ---------- 3D ---------- */
       if (type === "3D") {
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
+
           const distance = 0.2;
           pos
             .copy(raycaster.ray.origin)
@@ -503,11 +575,14 @@ AFRAME.registerComponent("pointer-draw", {
         } else {
           const origin = new THREE.Vector3();
           const direction = new THREE.Vector3();
+
           ctrlOrPointer.object3D.getWorldPosition(origin);
           ctrlOrPointer.object3D.getWorldDirection(direction);
+
           const distance = 0.2;
           pos.copy(origin).add(direction.multiplyScalar(distance));
         }
+
         intersectedMesh = escenario.getObject3D("mesh");
         return { point: pos, mesh: intersectedMesh };
       }
@@ -516,26 +591,24 @@ AFRAME.registerComponent("pointer-draw", {
     };
 
     // -------------------------
-    // DESKTOP POINTER
+    // POINTER EVENTS
     // -------------------------
     const onPointerDown = () => {
       if (!this.data.enabled) return;
       this.isPointerDown = true;
-      this.currentPoints = [];
-      this.currentLine = null;
-      this.currentMesh = null;
+      this.resetStroke();
     };
 
     const onPointerUp = () => {
       this.isPointerDown = false;
-      this.currentPoints = null;
-      this.currentLine = null;
-      this.currentMesh = null;
+      this.resetStroke();
     };
 
     const onPointerMove = (e) => {
       if (!this.data.enabled || !this.isPointerDown) return;
+
       const rect = sceneEl.canvas.getBoundingClientRect();
+
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointer.isVector2 = true;
@@ -563,16 +636,12 @@ AFRAME.registerComponent("pointer-draw", {
 
       controller.addEventListener("triggerdown", () => {
         this.handTriggerDown[hand] = true;
-        this.currentPoints = [];
-        this.currentLine = null;
-        this.currentMesh = null;
+        this.resetStroke();
       });
 
       controller.addEventListener("triggerup", () => {
         this.handTriggerDown[hand] = false;
-        this.currentPoints = null;
-        this.currentLine = null;
-        this.currentMesh = null;
+        this.resetStroke();
       });
     });
   },
@@ -582,8 +651,10 @@ AFRAME.registerComponent("pointer-draw", {
 
     ["right", "left"].forEach((hand) => {
       if (!this.handTriggerDown[hand]) return;
+
       const controller = document.querySelector(`#controller-${hand}`);
       if (!controller) return;
+
       const { point, mesh } = this.getDrawPosition(controller);
       this.addDrawPoint(point, mesh);
     });
@@ -620,6 +691,34 @@ AFRAME.registerComponent("line-selector", {
 
     this.selectedLines = [];
     this.lastClickTime = 0;
+
+    // 🔥 AQUI
+    const handlePointerDown = (source) => {
+      if (!this.data.enabled) return;
+
+      const now = performance.now();
+      const timeSinceLastClick = now - this.lastClickTime;
+
+      const clickedLine = getIntersectedLine(source);
+
+      if (timeSinceLastClick < this.data.doubleClickDelay) {
+        if (clickedLine && this.selectedLines.includes(clickedLine)) {
+          deleteLine(clickedLine);
+          this.lastClickTime = 0;
+          return;
+        }
+      }
+
+      if (clickedLine) {
+        if (this.selectedLines.includes(clickedLine)) {
+          deselectLine(clickedLine);
+        } else {
+          selectLine(clickedLine);
+        }
+      }
+
+      this.lastClickTime = now;
+    };
 
     raycaster.params.Line.threshold = this.data.threshold;
 
@@ -674,16 +773,9 @@ AFRAME.registerComponent("line-selector", {
       });
     };
 
-    const getIntersectedLine = (e) => {
+    const getIntersectedLine = (source) => {
       const drawGroup = getDrawGroup();
       if (!drawGroup) return null;
-
-      const rect = sceneEl.canvas.getBoundingClientRect();
-
-      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(pointer, sceneEl.camera);
 
       const lines = [];
 
@@ -691,25 +783,55 @@ AFRAME.registerComponent("line-selector", {
         if (child.isLine) lines.push(child);
       });
 
-      const intersects = raycaster.intersectObjects(lines, false);
+      // =========================
+      // 🖱 MOUSE / TOUCH (screen coords)
+      // =========================
+      if (source?.clientX !== undefined) {
+        const rect = sceneEl.canvas.getBoundingClientRect();
 
-      return intersects.length ? intersects[0].object : null;
+        pointer.x = ((source.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((source.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, sceneEl.camera);
+
+        const intersects = raycaster.intersectObjects(lines, false);
+        return intersects.length ? intersects[0].object : null;
+      }
+
+      // =========================
+      // 🕹 VR CONTROLLER (world ray)
+      // =========================
+      if (source?.object3D) {
+        const origin = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        source.object3D.getWorldPosition(origin);
+        source.object3D.getWorldDirection(direction);
+
+        raycaster.set(origin, direction);
+
+        const intersects = raycaster.intersectObjects(lines, false);
+        return intersects.length ? intersects[0].object : null;
+      }
+
+      return null;
     };
 
     const onPointerDown = (e) => {
       if (!this.data.enabled) return;
 
-      if (e.target.classList.contains("clickable")) return;
+      // ❌ SOLO aplica si viene de DOM (mouse)
+      if (e && e.target && e.target.classList?.contains("clickable")) return;
 
       const now = performance.now();
       const timeSinceLastClick = now - this.lastClickTime;
 
+      // 🔥 IMPORTANTE: normalizamos el input para raycast
       const clickedLine = getIntersectedLine(e);
 
       /* -------------------------
-      DOBLE CLICK → BORRAR
-      ------------------------- */
-
+  DOBLE CLICK → BORRAR
+  ------------------------- */
       if (timeSinceLastClick < this.data.doubleClickDelay) {
         if (clickedLine && this.selectedLines.includes(clickedLine)) {
           deleteLine(clickedLine);
@@ -719,9 +841,8 @@ AFRAME.registerComponent("line-selector", {
       }
 
       /* -------------------------
-      CLICK NORMAL → TOGGLE
-      ------------------------- */
-
+  CLICK NORMAL → TOGGLE
+  ------------------------- */
       if (clickedLine) {
         if (this.selectedLines.includes(clickedLine)) {
           deselectLine(clickedLine);
@@ -735,7 +856,22 @@ AFRAME.registerComponent("line-selector", {
 
     sceneEl.addEventListener(
       "renderstart",
-      () => sceneEl.canvas.addEventListener("pointerdown", onPointerDown),
+      () => {
+        sceneEl.canvas.addEventListener("pointerdown", (e) => {
+          if (e.target.classList?.contains("clickable")) return;
+          handlePointerDown(e);
+        });
+
+        // 🔥 VR TRIGGERS AQUÍ (misma inicialización de input)
+        ["right", "left"].forEach((hand) => {
+          const ctrl = document.querySelector(`#controller-${hand}`);
+          if (!ctrl) return;
+
+          ctrl.addEventListener("triggerdown", () => {
+            handlePointerDown(ctrl);
+          });
+        });
+      },
       { once: true },
     );
   },
@@ -757,7 +893,12 @@ AFRAME.registerComponent("line-gizmo", {
     const sceneEl = this.el.sceneEl;
 
     this.gizmo = null;
-    this.selectedLine = null;
+
+    // 🔥 MULTI-SELECCIÓN
+    this.selectedLines = [];
+
+    // 🔥 offsets relativos del grupo (CLAVE para no perder distancias)
+    this.groupOffsets = new Map();
 
     this.cameraObj = sceneEl.camera?.el?.object3D || null;
 
@@ -767,6 +908,10 @@ AFRAME.registerComponent("line-gizmo", {
     // 🔥 MOVE STATE
     this.isMoving = false;
     this.moveOffset = new THREE.Vector3();
+
+    /* -------------------------
+    MATERIALS
+    ------------------------- */
 
     this.materialNormalMesh = new THREE.MeshBasicMaterial({
       color: this.data.materialNormal,
@@ -792,6 +937,10 @@ AFRAME.registerComponent("line-gizmo", {
         if (child.isMesh) child.material = mat;
       });
     };
+
+    /* -------------------------
+    VISUALES DEL GIZMO
+    ------------------------- */
 
     const createCircleVisual = () => {
       const circle = document.createElement("a-entity");
@@ -824,67 +973,27 @@ AFRAME.registerComponent("line-gizmo", {
       return move;
     };
 
-    const getLineMidpoint = (line) => {
-      const pos = line.geometry.attributes.position.array;
-      const mid = Math.floor(pos.length / 6) * 3;
+    /* -------------------------
+    CENTRO DEL GRUPO (VISUAL)
+    ------------------------- */
 
-      return {
-        x: pos[mid],
-        y: pos[mid + 1],
-        z: pos[mid + 2],
-      };
+    const computeGroupCenter = (lines) => {
+      const center = new THREE.Vector3(0, 0, 0);
+
+      lines.forEach((line) => {
+        const pos = line.geometry.attributes.position.array;
+        const mid = Math.floor(pos.length / 6) * 3;
+
+        center.add(new THREE.Vector3(pos[mid], pos[mid + 1], pos[mid + 2]));
+      });
+
+      center.divideScalar(lines.length);
+      return center;
     };
 
-    const moveGizmoToLine = (line) => {
-      const p = getLineMidpoint(line);
-
-      if (!this.gizmo) {
-        createGizmo(p.x, p.y, p.z);
-      } else {
-        this.gizmo.object3D.position.set(p.x, p.y, p.z);
-      }
-
-      this.selectedLine = line;
-
-      // 🔥 FIX IMPORTANTE
-      line.frustumCulled = false;
-    };
-
-    const updateLinePosition = (line, newCenter) => {
-      const geometry = line.geometry;
-      const pos = geometry.attributes.position.array;
-
-      let cx = 0,
-        cy = 0,
-        cz = 0;
-      const count = pos.length / 3;
-
-      for (let i = 0; i < pos.length; i += 3) {
-        cx += pos[i];
-        cy += pos[i + 1];
-        cz += pos[i + 2];
-      }
-
-      cx /= count;
-      cy /= count;
-      cz /= count;
-
-      const dx = newCenter.x - cx;
-      const dy = newCenter.y - cy;
-      const dz = newCenter.z - cz;
-
-      for (let i = 0; i < pos.length; i += 3) {
-        pos[i] += dx;
-        pos[i + 1] += dy;
-        pos[i + 2] += dz;
-      }
-
-      geometry.attributes.position.needsUpdate = true;
-
-      // 🔥 CLAVE: evitar desaparición
-      geometry.computeBoundingSphere();
-      geometry.computeBoundingBox();
-    };
+    /* -------------------------
+    CREAR GIZMO
+    ------------------------- */
 
     const createGizmo = (x, y, z) => {
       const gizmo = document.createElement("a-entity");
@@ -903,8 +1012,12 @@ AFRAME.registerComponent("line-gizmo", {
       this.el.appendChild(gizmo);
       this.gizmo = gizmo;
 
+      /* -------------------------
+      SWITCH MODOS
+      ------------------------- */
+
       const clickHandler = () => {
-        if (!this.selectedLine) return;
+        if (!this.selectedLines.length) return;
 
         if (this.GizmoOption === "Circle") {
           this.GizmoOption = "Move";
@@ -929,19 +1042,98 @@ AFRAME.registerComponent("line-gizmo", {
         }
       };
 
-      circleVisual.addEventListener("click", clickHandler);
-      moveVisual.addEventListener("click", clickHandler);
+      const addInteraction = (el, handler) => {
+        el.addEventListener("click", handler);
+
+        ["right", "left"].forEach((hand) => {
+          const ctrl = document.querySelector(`#controller-${hand}`);
+          if (!ctrl) return;
+
+          ctrl.addEventListener("triggerdown", () => {
+            const raycaster = new THREE.Raycaster();
+            const origin = new THREE.Vector3();
+            const direction = new THREE.Vector3();
+
+            ctrl.object3D.getWorldPosition(origin);
+            ctrl.object3D.getWorldDirection(direction);
+            raycaster.set(origin, direction);
+
+            const intersects = raycaster.intersectObject(el.object3D, true);
+
+            if (intersects.length > 0) handler();
+          });
+        });
+      };
+
+      addInteraction(circleVisual, clickHandler);
+      addInteraction(moveVisual, clickHandler);
 
       /* -------------------------
-      DRAG MOVE
+      DRAG MOVE VR
+      ------------------------- */
+
+      ["right", "left"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl) return;
+
+        ctrl.addEventListener("triggerdown", () => {
+          if (!this.selectedLines.length) return;
+          if (this.GizmoOption !== "Move") return;
+
+          const raycaster = new THREE.Raycaster();
+          const origin = new THREE.Vector3();
+          const direction = new THREE.Vector3();
+
+          ctrl.object3D.getWorldPosition(origin);
+          ctrl.object3D.getWorldDirection(direction);
+          raycaster.set(origin, direction);
+
+          const intersects = raycaster.intersectObject(
+            moveVisual.object3D,
+            true,
+          );
+
+          if (!intersects.length) return;
+
+          this.isMoving = true;
+          this.visualSelected = true;
+
+          applyMaterialToVisual(moveVisual, true);
+
+          const gizmoPos = new THREE.Vector3();
+          const ctrlPos = new THREE.Vector3();
+
+          this.gizmo.object3D.getWorldPosition(gizmoPos);
+          ctrl.object3D.getWorldPosition(ctrlPos);
+
+          this.moveOffset.copy(gizmoPos).sub(ctrlPos);
+        });
+
+        ctrl.addEventListener("triggerup", () => {
+          if (!this.isMoving) return;
+
+          this.isMoving = false;
+          this.visualSelected = false;
+
+          applyMaterialToVisual(moveVisual, false);
+
+          if (this.selectedLines.length) {
+            updateLinesPosition(
+              this.selectedLines,
+              this.gizmo.object3D.position,
+            );
+          }
+        });
+      });
+
+      /* -------------------------
+      DESKTOP DRAG
       ------------------------- */
 
       moveVisual.addEventListener("mousedown", () => {
         if (this.GizmoOption !== "Move") return;
 
         this.isMoving = true;
-
-        // 🔵 ACTIVAR COLOR AZUL (grabbing)
         applyMaterialToVisual(moveVisual, true);
 
         const gizmoPos = new THREE.Vector3();
@@ -957,67 +1149,144 @@ AFRAME.registerComponent("line-gizmo", {
         if (!this.isMoving) return;
 
         this.isMoving = false;
-
-        // 🔴 VOLVER A ROJO (idle)
         applyMaterialToVisual(moveVisual, false);
 
-        if (this.selectedLine) {
-          updateLinePosition(this.selectedLine, this.gizmo.object3D.position);
+        if (this.selectedLines.length) {
+          updateLinesPosition(this.selectedLines, this.gizmo.object3D.position);
         }
       });
     };
 
     /* -------------------------
-    SELECCIÓN
+    MOVIMIENTO GRUPO (CORREGIDO)
+    ------------------------- */
+
+    const updateLinesPosition = (lines, newCenter) => {
+      lines.forEach((line) => {
+        const geometry = line.geometry;
+        const pos = geometry.attributes.position.array;
+
+        // 🔥 offset guardado en selección (clave para mantener distancias)
+        const offset = this.groupOffsets.get(line);
+        if (!offset) return;
+
+        // nuevo centro de esta línea manteniendo estructura del grupo
+        const targetCenter = {
+          x: newCenter.x + offset.x,
+          y: newCenter.y + offset.y,
+          z: newCenter.z + offset.z,
+        };
+
+        let cx = 0,
+          cy = 0,
+          cz = 0;
+        const count = pos.length / 3;
+
+        for (let i = 0; i < pos.length; i += 3) {
+          cx += pos[i];
+          cy += pos[i + 1];
+          cz += pos[i + 2];
+        }
+
+        cx /= count;
+        cy /= count;
+        cz /= count;
+
+        const dx = targetCenter.x - cx;
+        const dy = targetCenter.y - cy;
+        const dz = targetCenter.z - cz;
+
+        for (let i = 0; i < pos.length; i += 3) {
+          pos[i] += dx;
+          pos[i + 1] += dy;
+          pos[i + 2] += dz;
+        }
+
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeBoundingSphere();
+        geometry.computeBoundingBox();
+      });
+    };
+
+    /* -------------------------
+    SELECCIÓN DE LÍNEAS
     ------------------------- */
 
     sceneEl.addEventListener("lines-selected", (evt) => {
       const lines = evt.detail.lines;
       if (!lines || !lines.length) return;
 
-      const line = lines[lines.length - 1];
-      moveGizmoToLine(line);
+      this.selectedLines = lines;
+
+      const center = computeGroupCenter(lines);
+
+      // 🔥 GUARDAR OFFSETS RELATIVOS (CLAVE FIX)
+      this.groupOffsets.clear();
+
+      lines.forEach((line) => {
+        const pos = line.geometry.attributes.position.array;
+
+        let cx = 0,
+          cy = 0,
+          cz = 0;
+        const count = pos.length / 3;
+
+        for (let i = 0; i < pos.length; i += 3) {
+          cx += pos[i];
+          cy += pos[i + 1];
+          cz += pos[i + 2];
+        }
+
+        cx /= count;
+        cy /= count;
+        cz /= count;
+
+        this.groupOffsets.set(line, {
+          x: cx - center.x,
+          y: cy - center.y,
+          z: cz - center.z,
+        });
+      });
+
+      if (!this.gizmo) {
+        createGizmo(center.x, center.y, center.z);
+      } else {
+        this.gizmo.object3D.position.copy(center);
+      }
     });
 
     /* -------------------------
-    DESELECCIÓN
+    DESELECCIÓN / DELETE
     ------------------------- */
 
-    sceneEl.addEventListener("lines-deselected", (evt) => {
-      const lines = evt.detail.lines;
-
+    const handleClear = (lines) => {
       if (!lines || !lines.length) {
         if (this.gizmo) {
           this.gizmo.remove();
           this.gizmo = null;
         }
 
-        this.selectedLine = null;
+        this.selectedLines = [];
+        this.groupOffsets.clear();
         return;
       }
 
-      moveGizmoToLine(lines[lines.length - 1]);
-    });
+      this.selectedLines = lines;
 
-    /* -------------------------
-    ELIMINACIÓN
-    ------------------------- */
+      const center = computeGroupCenter(lines);
 
-    sceneEl.addEventListener("line-deleted", (evt) => {
-      const lines = evt.detail.lines;
-
-      if (!lines || !lines.length) {
-        if (this.gizmo) {
-          this.gizmo.remove();
-          this.gizmo = null;
-        }
-
-        this.selectedLine = null;
-        return;
+      if (this.gizmo) {
+        this.gizmo.object3D.position.copy(center);
       }
+    };
 
-      moveGizmoToLine(lines[lines.length - 1]);
-    });
+    sceneEl.addEventListener("lines-deselected", (evt) =>
+      handleClear(evt.detail.lines),
+    );
+
+    sceneEl.addEventListener("line-deleted", (evt) =>
+      handleClear(evt.detail.lines),
+    );
 
     /* -------------------------
     TICK
@@ -1029,13 +1298,10 @@ AFRAME.registerComponent("line-gizmo", {
       const camPos = new THREE.Vector3();
       this.cameraObj.getWorldPosition(camPos);
 
-      // mirar a cámara
       this.gizmo.object3D.lookAt(camPos);
 
-      // mover con cámara
       if (this.isMoving && this.GizmoOption === "Move") {
         const newPos = new THREE.Vector3().copy(camPos).add(this.moveOffset);
-
         this.gizmo.object3D.position.copy(newPos);
       }
     };
@@ -1103,113 +1369,208 @@ AFRAME.registerComponent("plane-selector", {
 /* ========================== 
 POINTER ERASER COMPONENT
 ========================== */
+/* ==========================
+POINTER ERASER COMPONENT
+Compatibilidad: Desktop (click+drag) + VR (trigger+drag)
+========================== */
+
 AFRAME.registerComponent("pointer-eraser", {
   schema: {
     enabled: { type: "boolean", default: false },
-    radius: { type: "number", default: 0.045 },
+    radius: { type: "number", default: 0.025 }, // radio de borrado en world units
   },
 
   init: function () {
     const sceneEl = this.el.sceneEl;
+
     this.drawSystem = sceneEl.components["pointer-draw"];
     if (!this.drawSystem) {
       console.warn("pointer-draw no encontrado");
       return;
     }
 
-    this.isPointerDown = false;
-    this.handTriggerDown = { right: false, left: false };
-    this.pointer = new THREE.Vector2();
+    // =========================
+    // ESTADO UNIFICADO
+    // =========================
+    this.isDrawing = false; // activa borrado (mouse o VR)
+    this.pointerMode = "mouse"; // debug opcional
 
-    // ACTIVACIÓN DESDE CREATOR MODE
+    // VR state por mano
+    this.handTriggerDown = { right: false, left: false };
+
+    // Pointer 2D para desktop (NDC space)
+    this.pointer = new THREE.Vector2();
+    this.raycaster = new THREE.Raycaster();
+
+    // =========================
+    // ACTIVACIÓN DESDE UI
+    // =========================
     sceneEl.addEventListener("IconErase-clicked", (evt) => {
       this.data.enabled = !!evt.detail.active;
-      this.isPointerDown = false;
+
+      // reset de estado
+      this.isDrawing = false;
+      this.handTriggerDown = { right: false, left: false };
     });
 
-    // DESKTOP
-    const onPointerDown = () => {
-      if (this.data.enabled) this.isPointerDown = true;
-    };
-    const onPointerUp = () => (this.isPointerDown = false);
+    // =========================================================
+    // DESKTOP: CLICK + DRAG (mouse/touch unificado)
+    // =========================================================
 
-    const onPointerMove = (e) => {
-      if (!this.data.enabled || !this.isPointerDown) return;
+    this.updateMousePointer = (e) => {
       const rect = sceneEl.canvas.getBoundingClientRect();
+
       this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      this.pointer.isVector2 = true;
 
-      this.eraseAt(this.pointer);
+      this.pointer.isVector2 = true;
+    };
+
+    const onPointerDown = (e) => {
+      if (!this.data.enabled) return;
+
+      this.isDrawing = true;
+      this.pointerMode = "mouse";
+
+      // actualizar posición inmediata
+      this.updateMousePointer(e);
+    };
+
+    const onPointerUp = () => {
+      this.isDrawing = false;
+    };
+
+    const onPointerMove = (e) => {
+      if (!this.data.enabled) return;
+
+      // actualizar posición siempre, pero solo borra si isDrawing = true
+      this.updateMousePointer(e);
     };
 
     sceneEl.addEventListener(
       "renderstart",
       () => {
-        sceneEl.canvas.addEventListener("pointerdown", onPointerDown);
-        sceneEl.canvas.addEventListener("pointerup", onPointerUp);
-        sceneEl.canvas.addEventListener("pointermove", onPointerMove);
+        const canvas = sceneEl.canvas;
+
+        canvas.addEventListener("pointerdown", onPointerDown);
+        canvas.addEventListener("pointerup", onPointerUp);
+        canvas.addEventListener("pointermove", onPointerMove);
       },
       { once: true },
     );
 
-    // VR
+    // =========================================================
+    // VR: TRIGGER DOWN + DRAG CONTINUO
+    // =========================================================
+
     ["right", "left"].forEach((hand) => {
       const ctrl = document.querySelector(`#controller-${hand}`);
       if (!ctrl) return;
+
+      // INICIO BORRADO
       ctrl.addEventListener("triggerdown", () => {
         this.handTriggerDown[hand] = true;
+
+        this.isDrawing = true;
+        this.pointerMode = "vr";
       });
+
+      // FIN BORRADO
       ctrl.addEventListener("triggerup", () => {
         this.handTriggerDown[hand] = false;
+
+        // si ninguna mano está activa → parar borrado
+        const anyActive = Object.values(this.handTriggerDown).some((v) => v);
+        if (!anyActive) this.isDrawing = false;
       });
     });
   },
 
+  // =========================================================
+  // LOOP PRINCIPAL (DRAG CONTINUO)
+  // =========================================================
   tick: function () {
-    if (!this.data.enabled) return;
-    if (!this.drawSystem) return;
+    if (!this.data.enabled || !this.drawSystem || !this.isDrawing) return;
 
-    ["right", "left"].forEach((hand) => {
-      if (!this.handTriggerDown[hand]) return;
-      const ctrl = document.querySelector(`#controller-${hand}`);
-      if (!ctrl) return;
-      this.eraseAt(ctrl);
-    });
+    // =========================
+    // VR MODE (controller ray)
+    // =========================
+    let activeHand = null;
+
+    if (this.handTriggerDown.right) activeHand = "right";
+    else if (this.handTriggerDown.left) activeHand = "left";
+
+    if (activeHand) {
+      const ctrl = document.querySelector(`#controller-${activeHand}`);
+      if (ctrl) this.eraseAt(ctrl);
+      return;
+    }
+
+    // =========================
+    // DESKTOP MODE (mouse ray)
+    // =========================
+    if (this.pointer?.isVector2) {
+      this.eraseAt(this.pointer);
+    }
   },
 
-  // BORRADO REAL
-  eraseAt: function (ctrlOrPointer) {
-    if (!this.drawSystem || !this.drawSystem.drawGroup) return;
+  // =========================================================
+  // BORRADO PRINCIPAL (entities + lines)
+  // =========================================================
+  eraseAt: function (input) {
+    if (!this.drawSystem?.drawGroup) return;
 
-    const { point } = this.drawSystem.getDrawPosition(ctrlOrPointer);
+    const { point } = this.drawSystem.getDrawPosition(input);
     if (!point) return;
 
-    // Recorremos todas las líneas ya existentes
-    const lines = this.drawSystem.drawGroup.children.slice(); // copia para iterar
-    lines.forEach((line) => {
-      if (!line.geometry || !line.geometry.attributes.position) return;
+    const radiusSq = this.data.radius * this.data.radius;
 
-      const positions = line.geometry.attributes.position.array;
-      const newPoints = [];
+    const drawGroup = this.drawSystem.drawGroup;
 
-      for (let i = 0; i < positions.length; i += 3) {
-        const p = new THREE.Vector3(
-          positions[i],
-          positions[i + 1],
-          positions[i + 2],
-        );
-        if (p.distanceTo(point) > this.data.radius) newPoints.push(p);
-      }
+    // recorrer todas las entidades del sistema de dibujo
+    const entities = drawGroup.children.slice();
 
-      if (newPoints.length < 2) {
-        // eliminar línea completa si quedan menos de 2 puntos
-        this.drawSystem.drawGroup.remove(line);
-      } else {
-        // actualizar geometría existente sin crear nada
-        line.geometry.setFromPoints(newPoints);
-        line.geometry.attributes.position.needsUpdate = true;
-      }
+    entities.forEach((entity) => {
+      if (!entity) return;
+
+      entity.traverse((child) => {
+        if (!child.isLine || !child.geometry?.attributes?.position) return;
+
+        const positions = child.geometry.attributes.position.array;
+        const newPoints = [];
+
+        const worldPos = new THREE.Vector3();
+
+        for (let i = 0; i < positions.length; i += 3) {
+          worldPos.set(positions[i], positions[i + 1], positions[i + 2]);
+
+          // convertir a world space
+          entity.localToWorld(worldPos);
+
+          const dx = worldPos.x - point.x;
+          const dy = worldPos.y - point.y;
+          const dz = worldPos.z - point.z;
+
+          const distSq = dx * dx + dy * dy + dz * dz;
+
+          // mantener puntos fuera del radio de borrado
+          if (distSq > radiusSq) {
+            entity.worldToLocal(worldPos);
+            newPoints.push(worldPos.clone());
+          }
+        }
+
+        // eliminar línea si queda demasiado corta
+        if (newPoints.length < 2) {
+          entity.remove(child);
+          return;
+        }
+
+        // actualizar geometría sin romper entidad
+        child.geometry.setFromPoints(newPoints);
+        child.geometry.attributes.position.needsUpdate = true;
+        child.geometry.computeBoundingSphere();
+      });
     });
   },
 });
@@ -1318,29 +1679,54 @@ AFRAME.registerComponent("color-wheel", {
     this.active = false;
     this.el.object3D.visible = false;
 
-    // Función pública para toggle
+        // Función pública para toggle
     this.setActive = (state) => {
       this.active = state;
       this.el.object3D.visible = state;
     };
 
-    // Detector de color
-    this.el.addEventListener("click", (evt) => {
-      if (!evt.detail.intersection) return;
-      const uv = evt.detail.intersection.uv;
+    // ==========================
+    // TRACKING VR (CLAVE)
+    // ==========================
+    this.currentIntersection = null;
+
+    this.el.addEventListener("raycaster-intersected", (evt) => {
+      this.currentIntersection = evt.detail.intersection;
+    });
+
+    this.el.addEventListener("raycaster-intersected-cleared", () => {
+      this.currentIntersection = null;
+    });
+
+    // Detector de color (UNIFICADO)
+    const handleSelect = (evt) => {
+      if (!this.active) return;
+
+      const intersection =
+        evt.detail?.intersection || this.currentIntersection;
+
+      if (!intersection || !intersection.uv) return;
+
+      const uv = intersection.uv;
+
       const x = Math.floor(uv.x * size);
       const y = Math.floor((1 - uv.y) * size);
+
       const pixel = ctx.getImageData(x, y, 1, 1).data;
+
       const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
 
       const draw = document.querySelector("[pointer-draw]");
-      if (draw && draw.components["pointer-draw"]) {
+      if (draw?.components?.["pointer-draw"]) {
         draw.components["pointer-draw"].currentColor = color;
       }
 
       console.log("Color seleccionado:", color);
-    });
+    };
 
+    // INPUT UNIFICADO XR
+    this.el.addEventListener("click", handleSelect);
+    this.el.addEventListener("triggerdown", handleSelect);
     // Escuchar eventos de icon-picker
     const sceneEl = this.el.sceneEl;
     sceneEl.addEventListener("IconColorPicker-clicked", (evt) => {
