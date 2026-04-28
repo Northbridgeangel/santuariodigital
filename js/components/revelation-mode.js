@@ -103,7 +103,7 @@ AFRAME.registerComponent("revelation-mode", {
             transparent: child.material?.transparent ?? false,
           });
         });
-        console.log("✔ Snapshot seguro del GLB guardado");
+        //console.log("✔ Snapshot seguro del GLB guardado");
       });
     }
 
@@ -120,7 +120,7 @@ AFRAME.registerComponent("revelation-mode", {
           });
         }
       });
-      console.log("✔ Snapshot del Sky guardado");
+      //console.log("✔ Snapshot del Sky guardado");
     }
 
     // Click en orb → avanzar estado

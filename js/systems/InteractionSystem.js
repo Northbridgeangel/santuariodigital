@@ -21,18 +21,17 @@ AFRAME.registerSystem("InteractionSystem", {
     const registerClickableEntities = () => {
       const clickableEls = document.querySelectorAll(".clickable");
 
-      clickableEls.forEach(el => {
-
+      clickableEls.forEach((el) => {
         const registerMesh = () => {
           const obj = el.getObject3D("mesh");
           if (!obj) return;
 
-          obj.traverse(child => {
+          obj.traverse((child) => {
             if (!child.isMesh || child.userData.interactable) return;
 
             // 🔹 Hacer interactable y hoverable
-            child.userData.interactable = true;   
-            child.userData.hoverable = true;      
+            child.userData.interactable = true;
+            child.userData.hoverable = true;
 
             // 🔹 Guardar material original para reset
             child.originalMaterial = child.material.clone();
@@ -41,7 +40,7 @@ AFRAME.registerSystem("InteractionSystem", {
             interactiveMeshes.push(child);
             globalMeshes.push(child);
 
-            console.log("✨ Clickable registrado:", el.id || child.name);
+            //console.log("✨ Clickable registrado:", el.id || child.name);
           });
         };
 
@@ -56,7 +55,6 @@ AFRAME.registerSystem("InteractionSystem", {
           };
           el.addEventListener("object3dset", handler);
         }
-
       });
     };
 
@@ -103,12 +101,9 @@ AFRAME.registerSystem("InteractionSystem", {
       if (interactiveMeshes.length === 0)
         console.warn("⚠️ No se encontraron meshes interactivos.");
       else
-        console.log(
-          `🎨 Meshes detectados (${interactiveMeshes.length}):`,
-          interactiveMeshes.map((m) => m.name),
-        );
+        //console.log(`🎨 Meshes detectados (${interactiveMeshes.length}):`, interactiveMeshes.map((m) => m.name),);
 
-      modelLoaded = true;
+        modelLoaded = true;
 
       // 🔥 Emitimos evento global de inicialización
       sceneEl.emit("open-globals-ready", {
@@ -183,8 +178,8 @@ AFRAME.registerSystem("InteractionSystem", {
       // 🔹 Mostrar ID confiable para GLB o clickable externo
       //-----------------------------------------
       const meshId = mesh.name || mesh.el?.id || "unknown";
-      console.log(`🔴 CLICK REAL: ${meshId}`);
-    };;
+      console.log(`🔴 CLICK: ${meshId}`);
+    };
 
     const attachPointerEvents = () => {
       const attach = () => {

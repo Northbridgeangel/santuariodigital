@@ -26,17 +26,14 @@ AFRAME.registerComponent("activate-ar", {
       this.sky = null;
     }
 
-    console.log("📷 AR system initialized");
-    console.log(
-      "🌌 Sky encontrado:",
-      this.sky ? this.sky.tagName : "no hay sky",
-    );
+    //console.log("📷 AR system initialized");
+    //console.log("🌌 Sky encontrado:", this.sky ? this.sky.tagName : "no hay sky",);
   },
 
   toggleAR() {
     this.isAR = !this.isAR;
 
-    console.log("🔄 Portal AR toggle:", this.isAR ? "ON" : "OFF");
+    //console.log("🔄 Portal AR toggle:", this.isAR ? "ON" : "OFF");
 
     if (this.isAR) this.enableAR();
     else this.disableAR();
@@ -60,7 +57,7 @@ AFRAME.registerComponent("activate-ar", {
 
     if (this.sky) {
       this.sky.object3D.visible = true;
-      console.log("🌌 Sky restaurado");
+      //console.log("🌌 Sky restaurado");
     }
 
     if (!this.stream) return;
@@ -72,7 +69,7 @@ AFRAME.registerComponent("activate-ar", {
 
     this.scene.object3D.background = null;
 
-    console.log("📷 Cámara desactivada");
+    //console.log("📷 Cámara desactivada");
   },
 });
 

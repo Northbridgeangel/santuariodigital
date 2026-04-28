@@ -15,6 +15,7 @@ function handleClick(mesh) {
   //-----------------------------------------
   if (
     mesh.name?.startsWith("Btn-creator-menú") ||
+    mesh.name?.startsWith("Portal_Revelation") ||
     mesh.name?.startsWith("Icon")
   ) {
     // NO resetear aquí, el sistema creator-mode controla el estado
@@ -27,9 +28,9 @@ function handleClick(mesh) {
   // 🔹 Si ya había un mesh seleccionado distinto, lo reseteamos
   if (selectedMesh && selectedMesh !== mesh) {
     resetMesh(selectedMesh);
-    console.log(
-      `Mesh ${getMeshId(selectedMesh)} deseleccionado automáticamente`,
-    );
+    //console.log(
+    //  `Mesh ${getMeshId(selectedMesh)} deseleccionado automáticamente`,
+    //);
     selectedMesh = null;
   }
 
@@ -37,14 +38,14 @@ function handleClick(mesh) {
   if (selectedMesh === mesh) {
     resetMesh(mesh);
     selectedMesh = null;
-    console.log(`Mesh ${getMeshId(mesh)} deseleccionado`);
+    //console.log(`Mesh ${getMeshId(mesh)} deseleccionado`);
     return;
   }
 
   // 🔹 Seleccionamos el mesh clicado
   selectedMesh = mesh;
   resaltarMesh(mesh, "click"); // aplicamos resalte click (rojo)
-  console.log(`Mesh ${getMeshId(mesh)} seleccionado`);
+  //console.log(`Mesh ${getMeshId(mesh)} seleccionado`);
 }
 
 function handleHover(mesh) {
@@ -78,7 +79,7 @@ function handleHover(mesh) {
   if (hoveredMesh !== mesh) {
     resaltarMesh(mesh, "hover");
     hoveredMesh = mesh;
-    console.log(`🟢 HOVER: ${getMeshId(mesh)}`);
+    //console.log(`🟢 HOVER: ${getMeshId(mesh)}`);
   }
 }
 
@@ -88,12 +89,14 @@ function handleHoverExit() {
 
   // 🔒 Si el mesh está activo (ej: Creator Menu), no lo reseteamos
   if (hoveredMesh.userData?.active) {
+    /*
     console.log(
       "HoverExit sobre:",
       getMeshId(hoveredMesh),
       "active:",
       hoveredMesh?.userData?.active,
     );
+    */
     return;
   }
 

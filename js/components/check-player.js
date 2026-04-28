@@ -22,11 +22,11 @@ AFRAME.registerComponent("check-player", {
     this.playerSize = new THREE.Vector3(); // <-- tamaño del jugador (minSize por defecto)
 
     const escenario = this.data.targetDoor;
-    if (!escenario) return console.error("❌ No se encontró el escenario");
+    //if (!escenario) return console.error("❌ No se encontró el escenario");
 
     escenario.addEventListener("model-loaded", () => {
       const mesh = escenario.getObject3D("mesh");
-      if (!mesh) return console.error("❌ Mesh del escenario no disponible");
+      //if (!mesh) return console.error("❌ Mesh del escenario no disponible");
 
       mesh.traverse((child) => {
         if (child.name === this.data.colliderName && child.isMesh) {
@@ -35,7 +35,7 @@ AFRAME.registerComponent("check-player", {
       });
 
       if (!this.doorMesh)
-        return console.error("❌ Collider de la puerta no encontrado");
+       // return console.error("❌ Collider de la puerta no encontrado");
 
       this.setPlayerVolume(this.doorMesh);
     });

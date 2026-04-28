@@ -916,13 +916,11 @@ AFRAME.registerComponent("line-gizmo", {
     this.materialNormalMesh = new THREE.MeshBasicMaterial({
       color: this.data.materialNormal,
       toneMapped: false,
-      flatShading: true,
     });
 
     this.materialSelectedMesh = new THREE.MeshBasicMaterial({
       color: this.data.materialSelected,
       toneMapped: false,
-      flatShading: true,
     });
 
     const applyMaterialToVisual = (visual, selected = false) => {
@@ -1663,7 +1661,7 @@ AFRAME.registerComponent("color-wheel", {
       radius,
     );
     grad.addColorStop(0, "white");
-    grad.addColorStop(1, "transparent");
+    grad.addColorStop(1, "rgba(0,0,0,0)"); //en vez de transparente
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
 

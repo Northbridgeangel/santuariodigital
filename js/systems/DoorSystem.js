@@ -302,7 +302,7 @@ AFRAME.registerComponent("check-door", {
             // D2. Click en sensor y puerta abierta → cerrar
             door.targetPosition = door.initialPosition.clone();
             collider.triggered = false;
-            console.log(`Sensor ${collider.name} clickeado → CERRANDO puerta`);
+            //console.log(`Sensor ${collider.name} clickeado → CERRANDO puerta`);
           } else {
             // Abrir puerta
             const { ejeAncho, anchoLocal } = door._doorData;
@@ -323,19 +323,19 @@ AFRAME.registerComponent("check-door", {
             door.targetPosition = door.initialPosition.clone().add(offset);
             collider.triggered = true;
 
-            console.log(`Sensor ${collider.name} → ABRIENDO puerta`);
+            //console.log(`Sensor ${collider.name} → ABRIENDO puerta`);
           }
 
           // Deseleccionamos sensor si fue clickado
           if (selectedMesh === collider.mesh) {
             resetMesh(collider.mesh);
             selectedMesh = null;
-            console.log(`Sensor ${collider.name} deseleccionado tras click`);
+            //console.log(`Sensor ${collider.name} deseleccionado tras click`);
           }
         } else if (!sensorActive && collider.lastIntersection) {
           door.targetPosition = door.initialPosition.clone();
           collider.triggered = false;
-          console.log(`Sensor ${collider.name} → CERRADO`);
+          //console.log(`Sensor ${collider.name} → CERRADO`);
         }
 
         if (door.position && door.targetPosition) {

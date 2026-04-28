@@ -12,10 +12,7 @@ AFRAME.registerComponent("fly-mode", {
     this.isFlying = this.data.active;
     this.el.sceneEl.isFlyMode = this.isFlying; // flag global accesible
 
-    console.log(
-      "✈️ FlyMode inicializado | Estado:",
-      this.isFlying ? "Activo" : "Desactivado",
-    );
+    //console.log("✈️ FlyMode inicializado | Estado:", this.isFlying ? "Activo" : "Desactivado",);
 
     // Mostrar estado inicial en el HUD
     this.updateWingsHUD(this.isFlying);
@@ -38,9 +35,7 @@ AFRAME.registerComponent("fly-mode", {
   toggleFlyMode: function () {
     this.isFlying = !this.isFlying;
     this.el.sceneEl.isFlyMode = this.isFlying;
-    console.log(
-      this.isFlying ? "🛫 Flight Mode ACTIVADO" : "🛬 Flight Mode DESACTIVADO",
-    );
+    //console.log(this.isFlying ? "🛫 Flight Mode ACTIVADO" : "🛬 Flight Mode DESACTIVADO",);
     this.updateWingsHUD(this.isFlying);
   },
 });
