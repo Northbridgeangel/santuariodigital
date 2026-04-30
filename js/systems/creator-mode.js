@@ -1574,55 +1574,155 @@ AFRAME.registerComponent("pointer-eraser", {
 });
 
 /* ========================== 
-COLOR PICKER COMPONENT
+COLOR PICKER VR (TRIGGER + RAYCAST MANUAL)
+Sin dependencia de raycaster de A-Frame
 ========================== */
+
 AFRAME.registerComponent("color-picker", {
   init: function () {
-    // Referencias a elementos
-    const wheelEl = document.createElement("a-entity");
-    wheelEl.setAttribute("color-wheel", "");
-    this.el.appendChild(wheelEl);
-
-    this.wheel = wheelEl.components["color-wheel"];
-
-    // Estado inicial
-    this.active = false;
-
-    // Función para mostrar/ocultar picker
-    this.toggle = (state) => {
-      this.active = state;
-      if (this.wheel) this.wheel.setActive(state);
-    };
-
-    // Eventos del icono del Creator Mode
     const sceneEl = this.el.sceneEl;
 
-    // Cuando el icono de color es clicado
-    sceneEl.addEventListener("IconColorPicker-clicked", (evt) => {
-      this.toggle(!!evt.detail.active);
+    // -------------------------
+    // CREAR WHEEL (UNO SOLO)
+    // -------------------------
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const radius = size / 2;
+
+    // 🎨 rueda de color
+    for (let angle = 0; angle < 360; angle++) {
+      const start = ((angle - 1) * Math.PI) / 180;
+      const end = (angle * Math.PI) / 180;
+      ctx.beginPath();
+      ctx.moveTo(radius, radius);
+      ctx.arc(radius, radius, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = `hsl(${angle},100%,50%)`;
+      ctx.fill();
+    }
+
+    // 🎨 gradiente central
+    const grad = ctx.createRadialGradient(
+      radius,
+      radius,
+      0,
+      radius,
+      radius,
+      radius
+    );
+    grad.addColorStop(0, "white");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    // -------------------------
+    // ENTITY VISUAL
+    // -------------------------
+    this.wheelEl = document.createElement("a-entity");
+    this.wheelEl.setAttribute("geometry", {
+      primitive: "circle",
+      radius: 0.12,
     });
 
-    // Cuando se cierra el Creator Mode
-    sceneEl.addEventListener("creator-mode-toggled", (evt) => {
-      if (!evt.detail.active) this.toggle(false);
+    this.wheelEl.setAttribute("material", {
+      src: canvas,
+      shader: "flat",
+      side: "double",
+      transparent: true,
     });
 
-    // Actualización del color en tiempo real (opcional)
-    sceneEl.addEventListener("wheel-color-selected", (evt) => {
-      const draw = document.querySelector("[pointer-draw]");
-      if (draw && draw.components["pointer-draw"]) {
-        draw.components["pointer-draw"].currentColor = evt.detail.color;
+    this.wheelEl.object3D.visible = false;
+    this.el.appendChild(this.wheelEl);
+
+    // -------------------------
+    // ESTADO
+    // -------------------------
+    this.active = false;
+
+    const setActive = (state) => {
+      this.active = state;
+      this.wheelEl.object3D.visible = state;
+
+      if (state) {
+        // posicionar delante de la cámara
+        const cam = sceneEl.camera.el.object3D;
+        const dir = new THREE.Vector3();
+        cam.getWorldDirection(dir);
+
+        const pos = new THREE.Vector3();
+        cam.getWorldPosition(pos);
+
+        pos.add(dir.multiplyScalar(0.5));
+        pos.y -= 0.15;
+
+        this.wheelEl.object3D.position.copy(pos);
+        this.wheelEl.object3D.lookAt(cam.position);
       }
+    };
+
+    // -------------------------
+    // EVENTO UI
+    // -------------------------
+    sceneEl.addEventListener("IconColorPicker-clicked", (evt) => {
+      setActive(!!evt.detail.active);
     });
 
-    // Posicionamiento del wheel cerca del cursor o controlador VR
-    this.el.addEventListener("mouseenter", (evt) => {
+    // -------------------------
+    // SELECCIÓN POR TRIGGER (VR)
+    // -------------------------
+    const selectColorFromController = (controller) => {
       if (!this.active) return;
-      // Posicionar wheel frente al usuario
-      const camera = sceneEl.camera.el;
-      const camPos = camera.object3D.position;
-      wheelEl.object3D.position.set(camPos.x, camPos.y - 0.2, camPos.z - 0.5);
-      wheelEl.object3D.lookAt(camPos);
+
+      const raycaster = new THREE.Raycaster();
+      const origin = new THREE.Vector3();
+      const direction = new THREE.Vector3();
+
+      controller.object3D.getWorldPosition(origin);
+      controller.object3D.getWorldDirection(direction);
+
+      raycaster.set(origin, direction);
+
+      const intersects = raycaster.intersectObject(
+        this.wheelEl.object3D,
+        true
+      );
+
+      if (!intersects.length) return;
+
+      const intersection = intersects[0];
+
+      if (!intersection.uv) return;
+
+      const uv = intersection.uv;
+
+      const x = Math.floor(uv.x * size);
+      const y = Math.floor((1 - uv.y) * size);
+
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+
+      const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+
+      const draw = document.querySelector("[pointer-draw]");
+      if (draw?.components?.["pointer-draw"]) {
+        draw.components["pointer-draw"].currentColor = color;
+      }
+
+      console.log("🎨 Color seleccionado:", color);
+    };
+
+    // -------------------------
+    // HOOK CONTROLLERS
+    // -------------------------
+    ["right", "left"].forEach((hand) => {
+      const ctrl = document.querySelector(`#controller-${hand}`);
+      if (!ctrl) return;
+
+      ctrl.addEventListener("triggerdown", () => {
+        selectColorFromController(ctrl);
+      });
     });
   },
 });
