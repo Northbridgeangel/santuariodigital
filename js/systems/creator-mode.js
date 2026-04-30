@@ -1367,15 +1367,10 @@ AFRAME.registerComponent("plane-selector", {
 /* ========================== 
 POINTER ERASER COMPONENT
 ========================== */
-/* ==========================
-POINTER ERASER COMPONENT
-Compatibilidad: Desktop (click+drag) + VR (trigger+drag)
-========================== */
-
 AFRAME.registerComponent("pointer-eraser", {
   schema: {
     enabled: { type: "boolean", default: false },
-    radius: { type: "number", default: 0.025 }, // radio de borrado en world units
+    radius: { type: "number", default: 0.025 },
   },
 
   init: function () {
@@ -1387,35 +1382,30 @@ AFRAME.registerComponent("pointer-eraser", {
       return;
     }
 
-    // =========================
-    // ESTADO UNIFICADO
-    // =========================
-    this.isDrawing = false; // activa borrado (mouse o VR)
-    this.pointerMode = "mouse"; // debug opcional
+    // -------------------------
+    // STATE
+    // -------------------------
+    this.isDrawing = false;
 
-    // VR state por mano
     this.handTriggerDown = { right: false, left: false };
 
-    // Pointer 2D para desktop (NDC space)
     this.pointer = new THREE.Vector2();
     this.raycaster = new THREE.Raycaster();
 
-    // =========================
-    // ACTIVACIÓN DESDE UI
-    // =========================
+    // -------------------------
+    // ACTIVATE / DEACTIVATE
+    // -------------------------
     sceneEl.addEventListener("IconErase-clicked", (evt) => {
       this.data.enabled = !!evt.detail.active;
 
-      // reset de estado
       this.isDrawing = false;
       this.handTriggerDown = { right: false, left: false };
     });
 
-    // =========================================================
-    // DESKTOP: CLICK + DRAG (mouse/touch unificado)
-    // =========================================================
-
-    this.updateMousePointer = (e) => {
+    // -------------------------
+    // DESKTOP INPUT
+    // -------------------------
+    const updateMousePointer = (e) => {
       const rect = sceneEl.canvas.getBoundingClientRect();
 
       this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1428,10 +1418,7 @@ AFRAME.registerComponent("pointer-eraser", {
       if (!this.data.enabled) return;
 
       this.isDrawing = true;
-      this.pointerMode = "mouse";
-
-      // actualizar posición inmediata
-      this.updateMousePointer(e);
+      updateMousePointer(e);
     };
 
     const onPointerUp = () => {
@@ -1440,9 +1427,7 @@ AFRAME.registerComponent("pointer-eraser", {
 
     const onPointerMove = (e) => {
       if (!this.data.enabled) return;
-
-      // actualizar posición siempre, pero solo borra si isDrawing = true
-      this.updateMousePointer(e);
+      updateMousePointer(e);
     };
 
     sceneEl.addEventListener(
@@ -1457,27 +1442,21 @@ AFRAME.registerComponent("pointer-eraser", {
       { once: true },
     );
 
-    // =========================================================
-    // VR: TRIGGER DOWN + DRAG CONTINUO
-    // =========================================================
-
+    // -------------------------
+    // VR INPUT (TRIGGERS)
+    // -------------------------
     ["right", "left"].forEach((hand) => {
       const ctrl = document.querySelector(`#controller-${hand}`);
       if (!ctrl) return;
 
-      // INICIO BORRADO
       ctrl.addEventListener("triggerdown", () => {
         this.handTriggerDown[hand] = true;
-
         this.isDrawing = true;
-        this.pointerMode = "vr";
       });
 
-      // FIN BORRADO
       ctrl.addEventListener("triggerup", () => {
         this.handTriggerDown[hand] = false;
 
-        // si ninguna mano está activa → parar borrado
         const anyActive = Object.values(this.handTriggerDown).some((v) => v);
         if (!anyActive) this.isDrawing = false;
       });
@@ -1485,14 +1464,14 @@ AFRAME.registerComponent("pointer-eraser", {
   },
 
   // =========================================================
-  // LOOP PRINCIPAL (DRAG CONTINUO)
+  // LOOP PRINCIPAL
   // =========================================================
   tick: function () {
     if (!this.data.enabled || !this.drawSystem || !this.isDrawing) return;
 
-    // =========================
-    // VR MODE (controller ray)
-    // =========================
+    // -------------------------
+    // VR MODE (RAYCAST REAL TIME)
+    // -------------------------
     let activeHand = null;
 
     if (this.handTriggerDown.right) activeHand = "right";
@@ -1500,32 +1479,64 @@ AFRAME.registerComponent("pointer-eraser", {
 
     if (activeHand) {
       const ctrl = document.querySelector(`#controller-${activeHand}`);
-      if (ctrl) this.eraseAt(ctrl);
+      if (!ctrl) return;
+
+      const raycaster = new THREE.Raycaster();
+      const origin = new THREE.Vector3();
+      const direction = new THREE.Vector3();
+
+      ctrl.object3D.getWorldPosition(origin);
+      ctrl.object3D.getWorldDirection(direction);
+
+      raycaster.set(origin, direction);
+
+      this.eraseAt({ raycaster });
       return;
     }
 
-    // =========================
-    // DESKTOP MODE (mouse ray)
-    // =========================
+    // -------------------------
+    // DESKTOP MODE
+    // -------------------------
     if (this.pointer?.isVector2) {
       this.eraseAt(this.pointer);
     }
   },
 
   // =========================================================
-  // BORRADO PRINCIPAL (entities + lines)
+  // ERASE CORE
   // =========================================================
   eraseAt: function (input) {
     if (!this.drawSystem?.drawGroup) return;
 
-    const { point } = this.drawSystem.getDrawPosition(input);
+    let point = null;
+
+    // -------------------------
+    // VR RAYCAST MODE
+    // -------------------------
+    if (input.raycaster) {
+      const intersects = input.raycaster.intersectObject(
+        this.drawSystem.drawGroup,
+        true,
+      );
+
+      if (!intersects.length) return;
+      point = intersects[0].point;
+    }
+
+    // -------------------------
+    // DESKTOP MODE
+    // -------------------------
+    else {
+      const result = this.drawSystem.getDrawPosition(input);
+      if (!result) return;
+      point = result.point;
+    }
+
     if (!point) return;
 
     const radiusSq = this.data.radius * this.data.radius;
 
     const drawGroup = this.drawSystem.drawGroup;
-
-    // recorrer todas las entidades del sistema de dibujo
     const entities = drawGroup.children.slice();
 
     entities.forEach((entity) => {
@@ -1542,7 +1553,6 @@ AFRAME.registerComponent("pointer-eraser", {
         for (let i = 0; i < positions.length; i += 3) {
           worldPos.set(positions[i], positions[i + 1], positions[i + 2]);
 
-          // convertir a world space
           entity.localToWorld(worldPos);
 
           const dx = worldPos.x - point.x;
@@ -1551,20 +1561,17 @@ AFRAME.registerComponent("pointer-eraser", {
 
           const distSq = dx * dx + dy * dy + dz * dz;
 
-          // mantener puntos fuera del radio de borrado
           if (distSq > radiusSq) {
             entity.worldToLocal(worldPos);
             newPoints.push(worldPos.clone());
           }
         }
 
-        // eliminar línea si queda demasiado corta
         if (newPoints.length < 2) {
           entity.remove(child);
           return;
         }
 
-        // actualizar geometría sin romper entidad
         child.geometry.setFromPoints(newPoints);
         child.geometry.attributes.position.needsUpdate = true;
         child.geometry.computeBoundingSphere();
@@ -1572,7 +1579,6 @@ AFRAME.registerComponent("pointer-eraser", {
     });
   },
 });
-
 /* ========================== 
 COLOR PICKER VR (TRIGGER + RAYCAST MANUAL)
 Sin dependencia de raycaster de A-Frame
