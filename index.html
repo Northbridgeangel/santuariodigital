@@ -32,6 +32,7 @@
     <script src="./js/systems/InteractionSystem.js"></script>
     <script src="./js/systems/DoorSystem.js"></script>
     <script src="./js/systems/creator-mode.js"></script>
+    <script src="./js/controls/drawing-persistence-controls.js"></script>
     <script src="./js/controls/desktopControl.js"></script>
     <script src="./js/controls/mobileControl.js"></script>
     <script src="./js/controls/vr-controls.js"></script>
@@ -137,7 +138,7 @@
     <!-- $$$$$$$$$$$$$ -->
     <a-scene webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking, layers" vr-mode-ui="enabled: true"
         cursor="rayOrigin: mouse" changenote pointer-draw plane-selector line-selector line-gizmo pointer-eraser
-        upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls> <!-- stats -->
+        upload-wall-texture fly-mode activate-ar="sky: #Main-sky;" revelation-mode vr-controls drawing-persistence-controls> <!-- stats -->
         <!-- Fondo -->
         <a-sky id="Main-sky" src="./assets/environment.png" rotation="0 -125 0"></a-sky>
 

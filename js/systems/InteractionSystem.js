@@ -178,7 +178,7 @@ AFRAME.registerSystem("InteractionSystem", {
       // 🔹 Mostrar ID confiable para GLB o clickable externo
       //-----------------------------------------
       const meshId = mesh.name || mesh.el?.id || "unknown";
-      console.log(`🔴 CLICK: ${meshId}`);
+      //console.log(`🔴 CLICK: ${meshId}`);
     };
 
     const attachPointerEvents = () => {

@@ -368,9 +368,13 @@ AFRAME.registerComponent("pointer-draw", {
     // -------------------------
     // COLOR CHANGE
     // -------------------------
-    this.setDrawColor = (colorHex) => {
+    this.setDrawColor = (color) => {
       this.resetStroke();
-      this.currentColor = colorHex;
+
+      // 🔥 normalización robusta (HEX number siempre)
+      const normalizedColor = new THREE.Color(color).getHex();
+
+      this.currentColor = normalizedColor;
     };
 
     // -------------------------
@@ -442,11 +446,39 @@ AFRAME.registerComponent("pointer-draw", {
         this.currentPoints,
       );
 
+      // 🎨 SOLO COLOR VISUAL (NO ES EL REAL DEL SISTEMA)
       const material = new THREE.LineBasicMaterial({
         color: this.currentColor,
       });
 
       this.currentLine = new THREE.Line(geometry, material);
+
+      // 🔥 asegurar que existe la entidad antes de heredar
+      const hexColor = this.currentColor;
+
+      const baseData = this.currentEntity?.userData || {
+        id: crypto.randomUUID(),
+        type: "draw-line",
+        points: [],
+        createdAt: Date.now(),
+
+        color: hexColor,
+        baseColor: hexColor,
+
+        mode: window.DrawingMode.type,
+        mesh: mesh,
+      };
+
+      // 🔥 CLAVE: la línea también tiene identidad propia
+      this.currentLine.userData = {
+        ...baseData,
+        segmentIndex: this.currentPoints.length,
+        isSegment: true,
+
+        // 🔥 refuerzo de consistencia
+        color: this.currentColor,
+        baseColor: this.currentColor,
+      };
 
       // -------------------------
       // ENTITY CREATE
@@ -459,7 +491,12 @@ AFRAME.registerComponent("pointer-draw", {
           type: "draw-line",
           points: [],
           createdAt: Date.now(),
+
+          // 💾 estado real del sistema (UNIFICADO)
           color: this.currentColor,
+          baseColor: this.currentColor,
+          currentColor: this.currentColor,
+
           mode: window.DrawingMode.type,
           mesh: mesh,
         };
@@ -468,13 +505,26 @@ AFRAME.registerComponent("pointer-draw", {
       }
 
       // -------------------------
+      // SINCRONIZACIÓN DE COLOR (OBLIGATORIA)
+      // -------------------------
+      this.currentEntity.userData.color = this.currentColor;
+      this.currentEntity.userData.baseColor = this.currentColor;
+      this.currentEntity.userData.currentColor = this.currentColor;
+
+      // -------------------------
       // ENTITY UPDATE
       // -------------------------
       this.currentEntity.add(this.currentLine);
 
       this.currentEntity.userData.points = this.currentPoints.slice();
       this.currentEntity.userData.color = this.currentColor;
-    };
+
+      // 🔥 sincronizar también con la línea activa
+      if (this.currentLine) {
+        this.currentLine.userData.points = this.currentPoints.slice();
+        this.currentLine.userData.color = this.currentColor;
+      }
+    };;;
 
     // -------------------------
     // CLEAR DRAWING
@@ -690,37 +740,17 @@ AFRAME.registerComponent("line-selector", {
     const pointer = new THREE.Vector2();
 
     this.selectedLines = [];
+
+    // 🔥 SNAPSHOT ESTABLE (clave para export fiable)
+    this.lastSelectionSnapshot = [];
+
     this.lastClickTime = 0;
 
-    // 🔥 AQUI
-    const handlePointerDown = (source) => {
-      if (!this.data.enabled) return;
-
-      const now = performance.now();
-      const timeSinceLastClick = now - this.lastClickTime;
-
-      const clickedLine = getIntersectedLine(source);
-
-      if (timeSinceLastClick < this.data.doubleClickDelay) {
-        if (clickedLine && this.selectedLines.includes(clickedLine)) {
-          deleteLine(clickedLine);
-          this.lastClickTime = 0;
-          return;
-        }
-      }
-
-      if (clickedLine) {
-        if (this.selectedLines.includes(clickedLine)) {
-          deselectLine(clickedLine);
-        } else {
-          selectLine(clickedLine);
-        }
-      }
-
-      this.lastClickTime = now;
-    };
-
     raycaster.params.Line.threshold = this.data.threshold;
+
+    /* ================================
+       HELPERS
+    ================================ */
 
     const getDrawGroup = () => {
       const modelRoot = escenario.getObject3D("mesh");
@@ -728,38 +758,113 @@ AFRAME.registerComponent("line-selector", {
       return modelRoot.getObjectByName("DrawGroup");
     };
 
-    const emitSelection = () => {
+    const syncSelection = () => {
+      this.lastSelectionSnapshot = [...this.selectedLines];
+
+      if (this.selectedLines.length === 0) {
+        sceneEl.emit("lines-cleared");
+        return;
+      }
+
       sceneEl.emit("lines-selected", {
         lines: this.selectedLines,
       });
     };
 
-    const selectLine = (line) => {
-      if (!line) return;
+    /* ================================
+       DEBUG CENTRAL
+    ================================ */
+    const debugLine = (line, data) => {
+      console.log("================================");
+      console.log("🟢 LINE SELECTED");
 
-      if (!this.selectedLines.includes(line)) {
-        if (!line.userData.originalColor) {
-          line.userData.originalColor = line.material.color.clone();
-        }
+      console.log({
+        id: data.id,
+        color: line.material?.color?.getHex?.(),
+        type: data.type,
+        mode: data.mode,
+        mesh: data.mesh?.name,
+      });
 
-        this.selectedLines.push(line);
-        line.material.color.set(0x00ffff);
+      const posAttr = line.geometry?.attributes?.position;
 
-        emitSelection();
+      if (posAttr) {
+        const pos = posAttr.array;
+
+        console.log("📍 POINT COUNT:", pos.length / 3);
+
+        console.log("📍 FIRST POINT:", {
+          x: pos[0],
+          y: pos[1],
+          z: pos[2],
+        });
       }
+
+      console.log("================================");
     };
 
+    /* ================================
+       SELECCIÓN
+    ================================ */
+
+    const selectLine = (line) => {
+      if (!line) return;
+      if (this.selectedLines.includes(line)) return;
+
+      this.selectedLines.push(line);
+
+      const SELECTION_COLOR = 0x00ffff;
+
+      // 🔥 BASE REAL (fuente única de verdad)
+      const base =
+        line.userData.baseColor ??
+        line.userData.currentColor ??
+        line.userData.color ??
+        line.material.color.getHex();
+
+      // 🔥 FIX CRÍTICO: persistencia correcta del color REAL
+      line.userData.baseColor = base;
+      line.userData.currentColor = base;
+      line.userData.color = base;
+
+      line.userData.isSelected = true;
+
+      // 🔥 SOLO VISUAL (NO MODIFICA EL ESTADO REAL)
+      line.material.color.set(SELECTION_COLOR);
+
+      line.material.userData = line.material.userData || {};
+      line.material.userData.highlight = true;
+
+      const data = line.userData || line.parent?.userData || {};
+
+      debugLine(line, data);
+
+      sceneEl.emit("stroke-selected", {
+        id: data.id,
+        type: data.type,
+        mode: data.mode,
+        mesh: data.mesh?.name,
+
+        // 🔥 IMPORTANTE: export usa el color REAL, no el de selección
+        color: base,
+
+        pointCount: line.geometry?.attributes?.position
+          ? line.geometry.attributes.position.array.length / 3
+          : 0,
+      });
+
+      syncSelection();
+    };
     const deselectLine = (line) => {
       this.selectedLines = this.selectedLines.filter((l) => l !== line);
 
-      if (line.userData.originalColor) {
-        line.material.color.copy(line.userData.originalColor);
-      }
+      const base = line.userData.baseColor ?? line.userData.color ?? 0xffffff;
 
-      sceneEl.emit("lines-deselected", {
-        line: line,
-        lines: this.selectedLines,
-      });
+      line.material.color.set(base);
+
+      line.userData.isSelected = false;
+
+      syncSelection();
     };
 
     const deleteLine = (line) => {
@@ -767,11 +872,12 @@ AFRAME.registerComponent("line-selector", {
 
       this.selectedLines = this.selectedLines.filter((l) => l !== line);
 
-      sceneEl.emit("line-deleted", {
-        line: line,
-        lines: this.selectedLines,
-      });
+      syncSelection();
     };
+
+    /* ================================
+       INTERSECCIÓN
+    ================================ */
 
     const getIntersectedLine = (source) => {
       const drawGroup = getDrawGroup();
@@ -783,9 +889,7 @@ AFRAME.registerComponent("line-selector", {
         if (child.isLine) lines.push(child);
       });
 
-      // =========================
-      // 🖱 MOUSE / TOUCH (screen coords)
-      // =========================
+      // 🖱 MOUSE / TOUCH
       if (source?.clientX !== undefined) {
         const rect = sceneEl.canvas.getBoundingClientRect();
 
@@ -798,9 +902,7 @@ AFRAME.registerComponent("line-selector", {
         return intersects.length ? intersects[0].object : null;
       }
 
-      // =========================
-      // 🕹 VR CONTROLLER (world ray)
-      // =========================
+      // 🕹 VR CONTROLLER
       if (source?.object3D) {
         const origin = new THREE.Vector3();
         const direction = new THREE.Vector3();
@@ -817,21 +919,19 @@ AFRAME.registerComponent("line-selector", {
       return null;
     };
 
-    const onPointerDown = (e) => {
-      if (!this.data.enabled) return;
+    /* ================================
+       INPUT HANDLER
+    ================================ */
 
-      // ❌ SOLO aplica si viene de DOM (mouse)
-      if (e && e.target && e.target.classList?.contains("clickable")) return;
+    const handlePointerDown = (source) => {
+      if (!this.data.enabled) return;
 
       const now = performance.now();
       const timeSinceLastClick = now - this.lastClickTime;
 
-      // 🔥 IMPORTANTE: normalizamos el input para raycast
-      const clickedLine = getIntersectedLine(e);
+      const clickedLine = getIntersectedLine(source);
 
-      /* -------------------------
-  DOBLE CLICK → BORRAR
-  ------------------------- */
+      // 🔥 DOBLE CLICK → DELETE
       if (timeSinceLastClick < this.data.doubleClickDelay) {
         if (clickedLine && this.selectedLines.includes(clickedLine)) {
           deleteLine(clickedLine);
@@ -840,9 +940,7 @@ AFRAME.registerComponent("line-selector", {
         }
       }
 
-      /* -------------------------
-  CLICK NORMAL → TOGGLE
-  ------------------------- */
+      // 🔥 TOGGLE SELECT
       if (clickedLine) {
         if (this.selectedLines.includes(clickedLine)) {
           deselectLine(clickedLine);
@@ -854,26 +952,24 @@ AFRAME.registerComponent("line-selector", {
       this.lastClickTime = now;
     };
 
-    sceneEl.addEventListener(
-      "renderstart",
-      () => {
-        sceneEl.canvas.addEventListener("pointerdown", (e) => {
-          if (e.target.classList?.contains("clickable")) return;
-          handlePointerDown(e);
-        });
+    /* ================================
+       EVENT BINDING
+    ================================ */
 
-        // 🔥 VR TRIGGERS AQUÍ (misma inicialización de input)
-        ["right", "left"].forEach((hand) => {
-          const ctrl = document.querySelector(`#controller-${hand}`);
-          if (!ctrl) return;
+    sceneEl.addEventListener("renderstart", () => {
+      sceneEl.canvas.addEventListener("pointerdown", (e) => {
+        handlePointerDown(e);
+      });
 
-          ctrl.addEventListener("triggerdown", () => {
-            handlePointerDown(ctrl);
-          });
+      ["right", "left"].forEach((hand) => {
+        const ctrl = document.querySelector(`#controller-${hand}`);
+        if (!ctrl) return;
+
+        ctrl.addEventListener("triggerdown", () => {
+          handlePointerDown(ctrl);
         });
-      },
-      { once: true },
-    );
+      });
+    });
   },
 });
 
@@ -1286,6 +1382,16 @@ AFRAME.registerComponent("line-gizmo", {
       handleClear(evt.detail.lines),
     );
 
+    sceneEl.addEventListener("lines-cleared", () => {
+      if (this.gizmo) {
+        this.gizmo.remove();
+        this.gizmo = null;
+      }
+
+      this.selectedLines = [];
+      this.groupOffsets.clear();
+    });
+
     /* -------------------------
     TICK
     ------------------------- */
@@ -1617,7 +1723,7 @@ AFRAME.registerComponent("color-picker", {
       0,
       radius,
       radius,
-      radius
+      radius,
     );
     grad.addColorStop(0, "white");
     grad.addColorStop(1, "rgba(0,0,0,0)");
@@ -1691,10 +1797,7 @@ AFRAME.registerComponent("color-picker", {
 
       raycaster.set(origin, direction);
 
-      const intersects = raycaster.intersectObject(
-        this.wheelEl.object3D,
-        true
-      );
+      const intersects = raycaster.intersectObject(this.wheelEl.object3D, true);
 
       if (!intersects.length) return;
 
@@ -1709,11 +1812,14 @@ AFRAME.registerComponent("color-picker", {
 
       const pixel = ctx.getImageData(x, y, 1, 1).data;
 
-      const color = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+      const color = new THREE.Color(
+        `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`,
+      ).getHex();
 
+      // 🔥 SIEMPRE pasar por API (NO tocar variable directa)
       const draw = document.querySelector("[pointer-draw]");
       if (draw?.components?.["pointer-draw"]) {
-        draw.components["pointer-draw"].currentColor = color;
+        draw.components["pointer-draw"].setDrawColor(color);
       }
 
       console.log("🎨 Color seleccionado:", color);
@@ -1783,7 +1889,7 @@ AFRAME.registerComponent("color-wheel", {
     this.active = false;
     this.el.object3D.visible = false;
 
-        // Función pública para toggle
+    // Función pública para toggle
     this.setActive = (state) => {
       this.active = state;
       this.el.object3D.visible = state;
@@ -1806,8 +1912,7 @@ AFRAME.registerComponent("color-wheel", {
     const handleSelect = (evt) => {
       if (!this.active) return;
 
-      const intersection =
-        evt.detail?.intersection || this.currentIntersection;
+      const intersection = evt.detail?.intersection || this.currentIntersection;
 
       if (!intersection || !intersection.uv) return;
 
