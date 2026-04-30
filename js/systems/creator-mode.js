@@ -546,11 +546,23 @@ AFRAME.registerComponent("pointer-draw", {
       if (type === "ground") {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+        // CASO DESKTOP / MOUSE
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
           raycaster.ray.intersectPlane(plane, pos);
-        } else {
-          ctrlOrPointer.object3D.getWorldPosition(pos);
+        }
+
+        // CASO VR (MANDO)
+        else {
+          const origin = new THREE.Vector3();
+          const direction = new THREE.Vector3();
+
+          ctrlOrPointer.object3D.getWorldPosition(origin);
+          ctrlOrPointer.object3D.getWorldDirection(direction);
+
+          raycaster.set(origin, direction);
+
+          raycaster.ray.intersectPlane(plane, pos);
         }
 
         intersectedMesh = escenario.getObject3D("mesh");
