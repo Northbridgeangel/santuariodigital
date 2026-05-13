@@ -22,6 +22,13 @@ function handleClick(mesh) {
     return; // 🚫 salir, solo la lógica de resaltar se hará desde creator-mode
   }
 
+  if (
+    mesh?.name?.includes("Btn-save-drawing") ||
+    mesh?.name?.includes("Btn-load-drawing")
+  ) {
+    return; // 🚫 no seleccionables, solo acción
+  }
+
   //-----------------------------------------
   // 🔹 Lógica genérica de selección/desselección para otros meshes
   //-----------------------------------------
