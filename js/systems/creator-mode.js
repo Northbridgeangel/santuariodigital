@@ -630,7 +630,7 @@ AFRAME.registerComponent("pointer-draw", {
         if (ctrlOrPointer.isVector2) {
           raycaster.setFromCamera(ctrlOrPointer, sceneEl.camera);
 
-          const distance = 0.2;
+          const distance = 0.025;
           pos
             .copy(raycaster.ray.origin)
             .add(raycaster.ray.direction.clone().multiplyScalar(distance));
@@ -641,7 +641,7 @@ AFRAME.registerComponent("pointer-draw", {
           ctrlOrPointer.object3D.getWorldPosition(origin);
           ctrlOrPointer.object3D.getWorldDirection(direction);
 
-          const distance = 0.2;
+          const distance = 0.025;
           pos.copy(origin).add(direction.multiplyScalar(distance));
         }
 
