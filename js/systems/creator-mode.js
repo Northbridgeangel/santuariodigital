@@ -333,7 +333,7 @@ AFRAME.registerComponent("pointer-draw", {
 
     // 🔥 AÑADIDO: smooth system
     this.lastPoint = null;
-    this.minDistance = 0.012;
+    this.minDistance = 0.0012;
     this.smoothFactor = 0.35;
 
     this.drawGroup = new THREE.Group();
